@@ -68,6 +68,7 @@ VertexShaderOutput main(VertexShaderInput input)
     output.screenPos = (min16float4)pos;
 
     // Pass a color.
+    
     output.color = min16float3(1.f, 1.f, 1.f);
 
     // Set the instance ID. The pass-through geometry shader will set the

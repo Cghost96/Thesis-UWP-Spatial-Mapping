@@ -65,6 +65,9 @@
     <ClInclude Include="Content\GetDataFromIBuffer.h">
       <Filter>Content</Filter>
     </ClInclude>
+    <ClInclude Include="Common\Helper.h">
+      <Filter>Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\SurfaceVertexShader.hlsl">

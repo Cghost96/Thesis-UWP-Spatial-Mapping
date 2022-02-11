@@ -29,7 +29,6 @@ using namespace Platform;
 RealtimeSurfaceMeshRenderer::RealtimeSurfaceMeshRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources) :
     m_deviceResources(deviceResources)
 {
-    m_meshCollection.clear();
     CreateDeviceDependentResources();
 };
 
@@ -218,6 +217,7 @@ void RealtimeSurfaceMeshRenderer::Render(bool isStereo, bool useWireframe)
 
 void RealtimeSurfaceMeshRenderer::CreateDeviceDependentResources()
 {
+    m_meshCollection.clear();
     m_usingVprtShaders = m_deviceResources->GetDeviceSupportsVprt();
 
     // On devices that do support the D3D11_FEATURE_D3D11_OPTIONS3::
