@@ -90,4 +90,7 @@
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="CodeMap.dgml" />
+  </ItemGroup>
 </Project>
