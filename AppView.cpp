@@ -46,9 +46,7 @@ AppView::AppView()
 {
 }
 
-
 // IFrameworkView methods
-
 // The first method called when the IFrameworkView is being created.
 // Use this method to subscribe for Windows shell events and to initialize your app.
 void AppView::Initialize(CoreApplicationView^ applicationView)
@@ -148,9 +146,7 @@ void AppView::Uninitialize()
 
 }
 
-
 // Application lifecycle event handlers
-
 // Called when the app view is activated. Activates the app's CoreWindow.
 void AppView::OnViewActivated(CoreApplicationView^ sender, IActivatedEventArgs^ args)
 {
@@ -191,9 +187,7 @@ void AppView::OnResuming(Platform::Object^ sender, Platform::Object^ args)
 	}
 }
 
-
 // Window event handlers
-
 void AppView::OnVisibilityChanged(CoreWindow^ sender, VisibilityChangedEventArgs^ args)
 {
 	m_windowVisible = args->Visible;
@@ -204,9 +198,7 @@ void AppView::OnWindowClosed(CoreWindow^ sender, CoreWindowEventArgs^ args)
 	m_windowClosed = true;
 }
 
-
 // Input event handlers
-
 void AppView::OnKeyPressed(CoreWindow^ sender, KeyEventArgs^ args)
 {
 	// This code sample does not use keyboard input.

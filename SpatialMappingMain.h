@@ -15,15 +15,11 @@
 // Comment out this preprocessor definition to disable all of the
 // sample content.
 //
-#define DRAW_SAMPLE_CONTENT
 
 #include "Common\DeviceResources.h"
 #include "Common\StepTimer.h"
-
-#ifdef DRAW_SAMPLE_CONTENT
 #include "Content\SpatialInputHandler.h"
 #include "Content\RealtimeSurfaceMeshRenderer.h"
-#endif
 
 // Updates, renders, and presents holographic content using Direct3D.
 namespace SpatialMapping
@@ -77,13 +73,11 @@ namespace SpatialMapping
         // and when tearing down AppMain.
         void UnregisterHolographicEventHandlers();
 
-#ifdef DRAW_SAMPLE_CONTENT
         // Listens for the Pressed spatial input event.
         std::shared_ptr<SpatialInputHandler>                                m_spatialInputHandler;
 
         // A data handler for surface meshes.
-        std::unique_ptr<WindowsHolographicCodeSamples::RealtimeSurfaceMeshRenderer> m_meshRenderer;
-#endif
+        std::unique_ptr<SpatialMapping::RealtimeSurfaceMeshRenderer> m_meshRenderer;
 
         // Cached pointer to device resources.
         std::shared_ptr<DX::DeviceResources>                                m_deviceResources;

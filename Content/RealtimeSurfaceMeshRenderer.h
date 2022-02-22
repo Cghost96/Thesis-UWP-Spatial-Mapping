@@ -20,7 +20,7 @@
 #include <map>
 #include <ppltasks.h>
 
-namespace WindowsHolographicCodeSamples
+namespace SpatialMapping
 {
 	class RealtimeSurfaceMeshRenderer
 	{

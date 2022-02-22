@@ -16,7 +16,7 @@
 #include <ppltasks.h>
 #include <sstream>
 
-namespace WindowsHolographicCodeSamples
+namespace SpatialMapping
 {
 	struct SurfaceMeshProperties
 	{

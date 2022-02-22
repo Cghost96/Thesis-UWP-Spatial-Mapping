@@ -18,7 +18,7 @@
 using namespace Microsoft::WRL;
 using namespace Windows::Storage::Streams;
 
-namespace WindowsHolographicCodeSamples
+namespace SpatialMapping
 {
     template <typename t = byte>
     t* GetDataFromIBuffer(Windows::Storage::Streams::IBuffer^ container)

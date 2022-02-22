@@ -15,7 +15,7 @@
 #include "Common\DirectXHelper.h"
 #include "RealtimeSurfaceMeshRenderer.h"
 
-using namespace WindowsHolographicCodeSamples;
+using namespace SpatialMapping;
 
 using namespace Concurrency;
 using namespace DX;

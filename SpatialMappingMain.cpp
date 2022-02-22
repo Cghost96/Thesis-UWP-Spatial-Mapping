@@ -16,9 +16,8 @@
 #include <windows.graphics.directx.direct3d11.interop.h>
 #include <Collection.h>
 
-
 using namespace SpatialMapping;
-using namespace WindowsHolographicCodeSamples;
+using namespace SpatialMapping;
 
 using namespace concurrency;
 using namespace Microsoft::WRL;
@@ -50,17 +49,15 @@ void SpatialMappingMain::SetHolographicSpace(
 
 	m_holographicSpace = holographicSpace;
 
-#ifdef DRAW_SAMPLE_CONTENT
 	// Initialize the sample hologram.
 	m_meshRenderer = std::make_unique<RealtimeSurfaceMeshRenderer>(m_deviceResources);
 
 	m_spatialInputHandler = std::make_unique<SpatialInputHandler>();
-#endif
 
 	// Use the default SpatialLocator to track the motion of the device.
 	m_locator = SpatialLocator::GetDefault();
 
-	// This sample responds to changes in the positional tracking state by cancelling deactivation 
+	// This sample responds to changes in the positional tracking state by canceling deactivation 
 	// of positional tracking.
 	m_positionalTrackingDeactivatingToken =
 		m_locator->PositionalTrackingDeactivating +=
@@ -297,7 +294,7 @@ HolographicFrame^ SpatialMappingMain::Update()
 					m_meshRenderer->AddSurface(id, surfaceInfo);
 				}
 
-				// We then subcribe to an event to receive up-to-date data.
+				// We then subscribe to an event to receive up-to-date data.
 				m_surfacesChangedToken = m_surfaceObserver->ObservedSurfacesChanged +=
 					ref new TypedEventHandler<SpatialSurfaceObserver^, Platform::Object^>(
 						bind(&SpatialMappingMain::OnSurfacesChanged, this, _1, _2)
@@ -316,7 +313,6 @@ HolographicFrame^ SpatialMappingMain::Update()
 		//     m_surfaceObserver->SetBoundingVolume(bounds);
 	}
 
-#ifdef DRAW_SAMPLE_CONTENT
 	// Check for new input state since the last frame.
 	SpatialInteractionSourceState^ pointerState = m_spatialInputHandler->CheckForInput();
 	if (pointerState != nullptr)
@@ -324,13 +320,10 @@ HolographicFrame^ SpatialMappingMain::Update()
 		// When a Pressed gesture is detected, the rendering mode will be changed to wireframe.
 		m_drawWireframe = !m_drawWireframe;
 	}
-#endif
 
 	m_timer.Tick([&]()
 		{
-#ifdef DRAW_SAMPLE_CONTENT
 			m_meshRenderer->Update(m_timer, currentCoordinateSystem);
-#endif
 		});
 
 	// This sample uses default image stabilization settings, and does not set the focus point.
@@ -389,7 +382,6 @@ bool SpatialMappingMain::Render(
 				// Attach the view/projection constant buffer for this camera to the graphics pipeline.
 				bool cameraActive = pCameraResources->AttachViewProjectionBuffer(m_deviceResources);
 
-#ifdef DRAW_SAMPLE_CONTENT
 				// Only render world-locked content when positional tracking is active.
 				if (cameraActive)
 				{
@@ -420,7 +412,6 @@ bool SpatialMappingMain::Render(
 						renderingParameters->CommitDirect3D11DepthBuffer(depthD3DSurface);
 					}
 				}
-#endif
 				atLeastOneCameraRendered = true;
 			}
 
@@ -442,18 +433,14 @@ void SpatialMappingMain::LoadAppState()
 // need to be released before this method returns.
 void SpatialMappingMain::OnDeviceLost()
 {
-#ifdef DRAW_SAMPLE_CONTENT
 	m_meshRenderer->ReleaseDeviceDependentResources();
-#endif
 }
 
 // Notifies classes that use Direct3D device resources that the device resources
 // may now be recreated.
 void SpatialMappingMain::OnDeviceRestored()
 {
-#ifdef DRAW_SAMPLE_CONTENT
 	m_meshRenderer->CreateDeviceDependentResources();
-#endif
 }
 
 void SpatialMappingMain::OnPositionalTrackingDeactivating(

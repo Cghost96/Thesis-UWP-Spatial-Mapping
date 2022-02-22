@@ -6,30 +6,34 @@
 
 #include <debugapi.h>
 
-namespace Helper
-{
-	template <typename T>
-	void LogMessage(const T value)
+namespace SpatialMapping {
+	namespace Helper
 	{
-		std::ostringstream os;
-		os << value << "\n";
-		OutputDebugStringA(os.str().c_str());
-	}
-
-	template <typename T>
-	void LogMessage(const std::vector<T> values, int const format = 1)
-	{
-		std::ostringstream os;
-
-		for (int i = 0; i < values.size(); i++)
+		template <typename T>
+		void LogMessage(const T value)
 		{
-			if (i % format == 0 and i > 0)
-			{
-				os << "\n";
-			}
-			os << values[i] << " ";
+			std::ostringstream os;
+			os << value << "\n";
+			OutputDebugStringA(os.str().c_str());
 		}
 
-		OutputDebugStringA(os.str().c_str());
+		template <typename T>
+		void LogMessage(const std::vector<T> values, int const format = 1)
+		{
+			std::ostringstream os;
+
+			for (int i = 0; i < values.size(); i++)
+			{
+				if (i % format == 0 and i > 0)
+				{
+					os << "\n";
+				}
+				os << values[i] << " ";
+			}
+
+			OutputDebugStringA(os.str().c_str());
+		}
 	}
 }
+
+

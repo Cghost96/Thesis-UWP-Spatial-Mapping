@@ -26,7 +26,7 @@
 #include "GetDataFromIBuffer.h"
 #include "SurfaceMesh.h"
 
-using namespace WindowsHolographicCodeSamples;
+using namespace SpatialMapping;
 using namespace DirectX;
 using namespace PackedVector;
 using namespace Windows::Perception::Spatial;

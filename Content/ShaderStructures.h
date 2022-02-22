@@ -11,7 +11,7 @@
 
 #pragma once
 
-namespace WindowsHolographicCodeSamples
+namespace SpatialMapping
 {
     // Constant buffer used to send hologram position transform to the shader pipeline.
     struct ModelConstantBuffer

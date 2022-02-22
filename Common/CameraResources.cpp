@@ -16,7 +16,7 @@
 #include "DeviceResources.h"
 #include <windows.graphics.directx.direct3d11.interop.h>
 
-using namespace WindowsHolographicCodeSamples;
+using namespace SpatialMapping;
 
 using namespace DirectX;
 using namespace Microsoft::WRL;

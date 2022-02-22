@@ -68,6 +68,7 @@
     <ClInclude Include="Common\Helper.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="Common\Settings.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\SurfaceVertexShader.hlsl">
@@ -88,8 +89,5 @@
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\README.md" />
   </ItemGroup>
 </Project>
