@@ -20,38 +20,38 @@ using namespace Windows::Storage::Streams;
 
 namespace SpatialMapping
 {
-    template <typename t = byte>
-    t* GetDataFromIBuffer(Windows::Storage::Streams::IBuffer^ container)
-    {
-        if (container == nullptr)
-        {
-            return nullptr;
-        }
+	template <typename t = byte>
+	t* GetDataFromIBuffer(Windows::Storage::Streams::IBuffer^& container)
+	{
+		if (container == nullptr)
+		{
+			return nullptr;
+		}
 
-        unsigned int bufferLength = container->Length;
+		unsigned int bufferLength = container->Length;
 
-        if (!(bufferLength > 0))
-        {
-            return nullptr;
-        }
+		if (!(bufferLength > 0))
+		{
+			return nullptr;
+		}
 
-        HRESULT hr = S_OK;
+		HRESULT hr = S_OK;
 
-        ComPtr<IUnknown> pUnknown = reinterpret_cast<IUnknown*>(container);
-        ComPtr<IBufferByteAccess> spByteAccess;
-        hr = pUnknown.As(&spByteAccess);
-        if (FAILED(hr))
-        {
-            return nullptr;
-        }
+		ComPtr<IUnknown> pUnknown = reinterpret_cast<IUnknown*>(container);
+		ComPtr<IBufferByteAccess> spByteAccess;
+		hr = pUnknown.As(&spByteAccess);
+		if (FAILED(hr))
+		{
+			return nullptr;
+		}
 
-        byte* pRawData = nullptr;
-        hr = spByteAccess->Buffer(&pRawData);
-        if (FAILED(hr))
-        {
-            return nullptr;
-        }
+		byte* pRawData = nullptr;
+		hr = spByteAccess->Buffer(&pRawData);
+		if (FAILED(hr))
+		{
+			return nullptr;
+		}
 
-        return reinterpret_cast<t*>(pRawData);
-    }
+		return reinterpret_cast<t*>(pRawData);
+	}
 }

@@ -12,6 +12,7 @@
 #pragma once
 
 #include "Common\DeviceResources.h"
+#include "Common\Settings.h"
 #include "ShaderStructures.h"
 #include <ppltasks.h>
 #include <sstream>

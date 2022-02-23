@@ -108,12 +108,12 @@ void AppView::Load(Platform::String^ entryPoint)
 // update, draw, and present loop, and it also oversees window message processing.
 void AppView::Run()
 {
-	// ---------------------------- For testing -----------------------------------
+#ifdef WRITE_VERTICES
 	Platform::String^ folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
 	std::wstring folderW(folder->Begin());
 	std::string folderA(folderW.begin(), folderW.end());
 	std::filesystem::remove_all(folderA);
-	// ----------------------------------------------------------------------------
+#endif
 
 	while (!m_windowClosed)
 	{

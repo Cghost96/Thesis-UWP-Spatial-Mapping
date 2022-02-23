@@ -252,7 +252,13 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 {
 	if (currentCoordSys != nullptr)
 	{
-		// ---------------------------- For testing -----------------------------------
+#ifdef SCALE_POSITIONS
+		float3 const pScale = surface->VertexPositionScale;
+#ifdef TRANSFORM_POSITIONS
+		SpatialCoordinateSystem^ const surfCoordSys = surface->CoordinateSystem;
+		Platform::IBox<float4x4>^ const surfCoordSysToWorld = surfCoordSys->TryGetTransformTo(currentCoordSys);
+#endif
+#ifdef WRITE_VERTICES
 		ApplicationData::Current->LocalFolder->CreateFolderAsync("Meshes", CreationCollisionOption::FailIfExists);
 		Platform::String^ folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
 
@@ -263,47 +269,93 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 		unsigned int hash = (unsigned int)surface->GetHashCode();
 		std::snprintf(file, 512, "%s\\mesh_%d.obj", charStr, hash);
 		std::ofstream fileOut(file, std::ios::out);
-		// ----------------------------------------------------------------------------
+#endif
+#endif
 
-		if (fileOut)
-		{
-			unsigned int const pCount = surface->VertexPositions->ElementCount;
-			float3 const pScale = surface->VertexPositionScale;
-			SpatialCoordinateSystem^ const surfCoordSys = surface->CoordinateSystem;
-			Platform::IBox<float4x4>^ const surfCoordSysToWorld = surfCoordSys->TryGetTransformTo(currentCoordSys);
-			XMSHORTN4* const pBytes = (XMSHORTN4*)GetDataFromIBuffer(positions);
-
+		unsigned int const pCount = surface->VertexPositions->ElementCount;
+		XMSHORTN4* const pBytes = GetDataFromIBuffer<XMSHORTN4>(positions);
+		if (pBytes != nullptr) {
 			for (int i = 0; i < pCount; i++)
 			{
-				XMSHORTN4 const pos = XMSHORTN4(pBytes[i]);
+				XMFLOAT4 p;
+				XMVECTOR const vec = XMLoadShortN4(&pBytes[i]);
+				XMStoreFloat4(&p, vec);
 
-				XMFLOAT4 posFloat;
-				XMVECTOR const vec = XMLoadShortN4(&pos);
-				XMStoreFloat4(&posFloat, vec);
+#ifdef SCALE_POSITIONS
+				XMFLOAT4 const ps = XMFLOAT4(p.x * pScale.x, p.y * pScale.y, p.z * pScale.z, p.w);
+#ifdef TRANSFORM_POSITIONS
+				float3 const t = transform(float3(ps.x, ps.y, ps.z), surfCoordSysToWorld->Value);
+				XMFLOAT4 const pst = XMFLOAT4(t.x, t.y, t.z, ps.w);
+#ifdef WRITE_VERTICES
+				fileOut << "v " << pst.x << " " << pst.y << " " << pst.z << "\n";
+#endif
+#else
+#ifdef WRITE_VERTICES
+				fileOut << "v " << ps.x << " " << ps.y << " " << ps.z << "\n";
+#endif
+#endif
 
-				XMFLOAT4 const posScaled = XMFLOAT4(posFloat.x * pScale.x, posFloat.y * pScale.y, posFloat.z * pScale.z, posFloat.w);
-				float3 const trans = transform(float3(posScaled.x, posScaled.y, posScaled.z), surfCoordSysToWorld->Value);
-				XMFLOAT4 const posScaledTrans = XMFLOAT4(trans.x, trans.y, trans.z, posScaled.w);
+#endif
 
-				fileOut << "v " << posScaledTrans.x << " " << posScaledTrans.y << " " << posScaledTrans.z << "\n";
 			}
+
+#ifdef WRITE_VERTICES
 			fileOut << "\n\n";
+#endif
 
-			unsigned int const iCount = surface->TriangleIndices->ElementCount;
-			uint16_t* const iBytes = (uint16_t*)GetDataFromIBuffer(indices);
+		}
 
-			for (uint16_t i = 0; i < iCount; i += 3)
+#ifdef USE_32BIT_INDICES
+		unsigned int const iCount = surface->TriangleIndices->ElementCount;
+		uint32_t* const iBytes = GetDataFromIBuffer<uint32_t>(indices);
+
+		if (iBytes != nullptr) {
+			for (uint32_t i = 0; i < iCount; i += 3)
 			{
-				// +1 to get .obj format indices
-				uint16_t const iOne = uint16_t(iBytes[i]) + 1;
-				uint16_t const iTwo = uint16_t(iBytes[i + 1]) + 1;
-				uint16_t const iThree = uint16_t(iBytes[i + 2]) + 1;
+#ifdef WRITE_VERTICES
+				// +1 to get .obj format
+				uint32_t const iOne = iBytes[i] + 1;
+				uint32_t const iTwo = iBytes[i + 1] + 1;
+				uint32_t const iThree = iBytes[i + 2] + 1;
 
 				fileOut << "f " << iOne << " " << iTwo << " " << iThree << "\n";
+#else
+				uint32_t const iOne = iBytes[i];
+				uint32_t const iTwo = iBytes[i + 1];
+				uint32_t const iThree = iBytes[i + 2];
+#endif
 			}
-			fileOut.close();
 		}
+#ifdef WRITE_VERTICES
+		fileOut.close();
+#endif
+#else
+		unsigned int const iCount = surface->TriangleIndices->ElementCount;
+		uint16_t* const iBytes = GetDataFromIBuffer<uint16_t>(indices);
+
+		if (iBytes != nullptr) {
+			for (uint16_t i = 0; i < iCount; i += 3)
+			{
+#ifdef WRITE_VERTICES
+				// +1 to get .obj format
+				uint16_t const iOne = iBytes[i] + 1;
+				uint16_t const iTwo = iBytes[i + 1] + 1;
+				uint16_t const iThree = iBytes[i + 2] + 1;
+
+				fileOut << "f " << iOne << " " << iTwo << " " << iThree << "\n";
+#else
+				uint16_t const iOne = iBytes[i];
+				uint16_t const iTwo = iBytes[i + 1];
+				uint16_t const iThree = iBytes[i + 2];
+#endif
+			}
 	}
+
+#ifdef WRITE_VERTICES
+		fileOut.close();
+#endif
+#endif
+}
 }
 
 void SurfaceMesh::UpdateVertexResources(
@@ -327,7 +379,9 @@ void SurfaceMesh::UpdateVertexResources(
 			Windows::Storage::Streams::IBuffer^ normals = surfaceMesh->VertexNormals->Data;
 			Windows::Storage::Streams::IBuffer^ indices = surfaceMesh->TriangleIndices->Data;
 
+#ifdef PROCESS_MESH
 			CalculateRegression(surfaceMesh, positions, normals, indices, coordSystem);
+#endif
 
 			// Then, we create Direct3D device buffers with the mesh data provided by HoloLens.
 			Microsoft::WRL::ComPtr<ID3D11Buffer> updatedVertexPositions;

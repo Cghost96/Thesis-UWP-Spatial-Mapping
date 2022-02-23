@@ -69,7 +69,7 @@ namespace SpatialMapping
 		unsigned int                                    m_surfaceMeshCount;
 
 		// Level of detail setting. The number of triangles that the system is allowed to provide per cubic meter.
-		double                                          m_maxTrianglesPerCubicMeter = 1000.0;
+		double                                          m_maxTrianglesPerCubicMeter = Options::MAX_TRIANGLES_PER_CUBIC_METER;
 
 		// If the current D3D Device supports VPRT, we can avoid using a geometry
 		// shader just to set the render target array index.
@@ -80,10 +80,10 @@ namespace SpatialMapping
 		Microsoft::WRL::ComPtr<ID3D11RasterizerState>   m_wireframeRasterizerState;
 
 		// The duration of time, in seconds, a mesh is allowed to remain inactive before deletion.
-		const float c_maxInactiveMeshTime = 120.f;
+		const float c_maxInactiveMeshTime = Options::MAX_INACTIVE_MESH_TIME;
 
 		// The duration of time, in seconds, taken for a new surface mesh to fade in on-screen.
-		const float c_surfaceMeshFadeInTime = 3.0f;
+		const float c_surfaceMeshFadeInTime = Options::MESH_FADE_IN_TIME;
 
 		bool m_loadingComplete;
 	};

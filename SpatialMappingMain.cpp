@@ -17,7 +17,6 @@
 #include <Collection.h>
 
 using namespace SpatialMapping;
-using namespace SpatialMapping;
 
 using namespace concurrency;
 using namespace Microsoft::WRL;
@@ -157,13 +156,6 @@ void SpatialMappingMain::OnSurfacesChanged(
 		auto id = pair->Key;
 		auto surfaceInfo = pair->Value;
 
-		// Choose whether to add, or update the surface.
-		// In this example, new surfaces are treated differently by highlighting them in a different
-		// color. This allows you to observe changes in the spatial map that are due to new meshes,
-		// as opposed to mesh updates.
-		// In your app, you might choose to process added surfaces differently than updated
-		// surfaces. For example, you might prioritize processing of added surfaces, and
-		// defer processing of updates to existing surfaces.
 		if (m_meshRenderer->HasSurface(id))
 		{
 			if (m_meshRenderer->GetLastUpdateTime(id).UniversalTime < surfaceInfo->UpdateTime.UniversalTime)
@@ -268,14 +260,13 @@ HolographicFrame^ SpatialMappingMain::Update()
 				m_surfaceMeshOptions->VertexNormalFormat = DirectXPixelFormat::R8G8B8A8IntNormalized;
 			}
 
-			// If you are using a very high detail setting with spatial mapping, it can be beneficial
-			// to use a 32-bit unsigned integer format for indices instead of the default 16-bit. 
-			// Uncomment the following code to enable 32-bit indices.
-			//IVectorView<DirectXPixelFormat>^ supportedTriangleIndexFormats = m_surfaceMeshOptions->SupportedTriangleIndexFormats;
-			//if (supportedTriangleIndexFormats->IndexOf(DirectXPixelFormat::R32UInt, &formatIndex))
-			//{
-				//m_surfaceMeshOptions->TriangleIndexFormat = DirectXPixelFormat::R32UInt;
-			//}
+#ifdef USE_32BIT_INDICES
+			IVectorView<DirectXPixelFormat>^ supportedTriangleIndexFormats = m_surfaceMeshOptions->SupportedTriangleIndexFormats;
+			if (supportedTriangleIndexFormats->IndexOf(DirectXPixelFormat::R32UInt, &formatIndex))
+			{
+				m_surfaceMeshOptions->TriangleIndexFormat = DirectXPixelFormat::R32UInt;
+			}
+#endif
 
 			// Create the observer.
 			m_surfaceObserver = ref new SpatialSurfaceObserver();
@@ -304,21 +295,13 @@ HolographicFrame^ SpatialMappingMain::Update()
 
 		// Keep the surface observer positioned at the device's location.
 		m_surfaceObserver->SetBoundingVolume(bounds);
-
-		// Note that it is possible to set multiple bounding volumes. Pseudocode:
-		//     m_surfaceObserver->SetBoundingVolumes(/* iterable collection of bounding volumes*/);
-		//
-		// It is also possible to use other bounding shapes - such as a view frustum. Pseudocode:
-		//     SpatialBoundingVolume^ bounds = SpatialBoundingVolume::FromFrustum(coordinateSystem, viewFrustum);
-		//     m_surfaceObserver->SetBoundingVolume(bounds);
 	}
 
 	// Check for new input state since the last frame.
 	SpatialInteractionSourceState^ pointerState = m_spatialInputHandler->CheckForInput();
 	if (pointerState != nullptr)
 	{
-		// When a Pressed gesture is detected, the rendering mode will be changed to wireframe.
-		m_drawWireframe = !m_drawWireframe;
+		m_drawWirfeFrame = !m_drawWirfeFrame;
 	}
 
 	m_timer.Tick([&]()
@@ -350,7 +333,7 @@ bool SpatialMappingMain::Render(
 	return m_deviceResources->UseHolographicCameraResources<bool>(
 		[this, holographicFrame](std::map<UINT32, std::unique_ptr<DX::CameraResources>>& cameraResourceMap)
 		{
-			// Up-to-date frame predictions enhance the effectiveness of image stablization and
+			// Up-to-date frame predictions enhance the effectiveness of image stabilization and
 			// allow more accurate positioning of holograms.
 			holographicFrame->UpdateCurrentPrediction();
 			HolographicFramePrediction^ prediction = holographicFrame->CurrentPrediction;
@@ -386,7 +369,7 @@ bool SpatialMappingMain::Render(
 				if (cameraActive)
 				{
 					// Draw the sample hologram.
-					m_meshRenderer->Render(pCameraResources->IsRenderingStereoscopic(), m_drawWireframe);
+					m_meshRenderer->Render(pCameraResources->IsRenderingStereoscopic(), m_drawWirfeFrame);
 
 					// On versions of the platform that support the CommitDirect3D11DepthBuffer API, we can 
 					// provide the depth buffer to the system, and it will use depth information to stabilize 
