@@ -235,12 +235,7 @@ HolographicFrame^ SpatialMappingMain::Update()
 
 	if (m_surfaceAccessAllowed)
 	{
-		SpatialBoundingBox axisAlignedBoundingBox =
-		{
-			{  0.f,  0.f, 0.f },
-			{ 20.f, 20.f, 5.f },
-		};
-		SpatialBoundingVolume^ bounds = SpatialBoundingVolume::FromBox(currentCoordinateSystem, axisAlignedBoundingBox);
+		SpatialBoundingVolume^ bounds = SpatialBoundingVolume::FromBox(currentCoordinateSystem, Options::BOUNDING_TYPE);
 
 		// If status is Allowed, we can create the surface observer.
 		if (m_surfaceObserver == nullptr)
@@ -290,6 +285,9 @@ HolographicFrame^ SpatialMappingMain::Update()
 					ref new TypedEventHandler<SpatialSurfaceObserver^, Platform::Object^>(
 						bind(&SpatialMappingMain::OnSurfacesChanged, this, _1, _2)
 						);
+
+				// Subscribe to hand-events
+
 			}
 		}
 

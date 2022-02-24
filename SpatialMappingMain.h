@@ -69,16 +69,16 @@ namespace SpatialMapping
 		void UnregisterHolographicEventHandlers();
 
 		// Listens for the Pressed spatial input event.
-		std::shared_ptr<SpatialInputHandler>                                m_spatialInputHandler;
+		std::shared_ptr<SpatialInputHandler> m_spatialInputHandler;
 
 		// A data handler for surface meshes.
-		std::unique_ptr<SpatialMapping::RealtimeSurfaceMeshRenderer>		m_meshRenderer;
+		std::unique_ptr<SpatialMapping::RealtimeSurfaceMeshRenderer> m_meshRenderer;
 
 		// Cached pointer to device resources.
-		std::shared_ptr<DX::DeviceResources>                                m_deviceResources;
+		std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
 		// Render loop timer.
-		DX::StepTimer                                                       m_timer;
+		DX::StepTimer m_timer;
 
 		// Represents the holographic space around the user.
 		Windows::Graphics::Holographic::HolographicSpace^ m_holographicSpace;
@@ -90,21 +90,21 @@ namespace SpatialMapping
 		Windows::Perception::Spatial::SpatialLocatorAttachedFrameOfReference^ m_referenceFrame;
 
 		// Event registration tokens.
-		Windows::Foundation::EventRegistrationToken                         m_cameraAddedToken;
-		Windows::Foundation::EventRegistrationToken                         m_cameraRemovedToken;
-		Windows::Foundation::EventRegistrationToken                         m_positionalTrackingDeactivatingToken;
-		Windows::Foundation::EventRegistrationToken                         m_surfacesChangedToken;
+		Windows::Foundation::EventRegistrationToken m_cameraAddedToken;
+		Windows::Foundation::EventRegistrationToken m_cameraRemovedToken;
+		Windows::Foundation::EventRegistrationToken m_positionalTrackingDeactivatingToken;
+		Windows::Foundation::EventRegistrationToken m_surfacesChangedToken;
 
 		// Indicates whether access to spatial mapping data has been granted.
-		bool                                                                m_surfaceAccessAllowed = false;
+		bool  m_surfaceAccessAllowed = false;
 
 		// Indicates whether the surface observer initialization process was started.
-		bool                                                                m_spatialPerceptionAccessRequested = false;
+		bool m_spatialPerceptionAccessRequested = false;
 
 		// Obtains spatial mapping data from the device in real time.
 		Windows::Perception::Spatial::Surfaces::SpatialSurfaceObserver^ m_surfaceObserver;
 		Windows::Perception::Spatial::Surfaces::SpatialSurfaceMeshOptions^ m_surfaceMeshOptions;
 
-		bool m_drawWirfeFrame = Options::DRAW_WIREFRAME_DEFAULT;
+		bool m_drawWirfeFrame = Options::DRAW_WIREFRAME_START_VALUE;
 	};
 }

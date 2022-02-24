@@ -258,7 +258,7 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 		SpatialCoordinateSystem^ const surfCoordSys = surface->CoordinateSystem;
 		Platform::IBox<float4x4>^ const surfCoordSysToWorld = surfCoordSys->TryGetTransformTo(currentCoordSys);
 #endif
-#ifdef WRITE_VERTICES
+#ifdef EXPORT_MESHES
 		ApplicationData::Current->LocalFolder->CreateFolderAsync("Meshes", CreationCollisionOption::FailIfExists);
 		Platform::String^ folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
 
@@ -286,11 +286,11 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 #ifdef TRANSFORM_POSITIONS
 				float3 const t = transform(float3(ps.x, ps.y, ps.z), surfCoordSysToWorld->Value);
 				XMFLOAT4 const pst = XMFLOAT4(t.x, t.y, t.z, ps.w);
-#ifdef WRITE_VERTICES
+#ifdef EXPORT_MESHES
 				fileOut << "v " << pst.x << " " << pst.y << " " << pst.z << "\n";
 #endif
 #else
-#ifdef WRITE_VERTICES
+#ifdef EXPORT_MESHES
 				fileOut << "v " << ps.x << " " << ps.y << " " << ps.z << "\n";
 #endif
 #endif
@@ -299,7 +299,7 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 
 			}
 
-#ifdef WRITE_VERTICES
+#ifdef EXPORT_MESHES
 			fileOut << "\n\n";
 #endif
 
@@ -312,7 +312,7 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 		if (iBytes != nullptr) {
 			for (uint32_t i = 0; i < iCount; i += 3)
 			{
-#ifdef WRITE_VERTICES
+#ifdef EXPORT_MESHES
 				// +1 to get .obj format
 				uint32_t const iOne = iBytes[i] + 1;
 				uint32_t const iTwo = iBytes[i + 1] + 1;
@@ -326,7 +326,7 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 #endif
 			}
 		}
-#ifdef WRITE_VERTICES
+#ifdef EXPORT_MESHES
 		fileOut.close();
 #endif
 #else
@@ -336,7 +336,7 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 		if (iBytes != nullptr) {
 			for (uint16_t i = 0; i < iCount; i += 3)
 			{
-#ifdef WRITE_VERTICES
+#ifdef EXPORT_MESHES
 				// +1 to get .obj format
 				uint16_t const iOne = iBytes[i] + 1;
 				uint16_t const iTwo = iBytes[i + 1] + 1;
@@ -351,7 +351,7 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 			}
 	}
 
-#ifdef WRITE_VERTICES
+#ifdef EXPORT_MESHES
 		fileOut.close();
 #endif
 #endif

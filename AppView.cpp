@@ -108,11 +108,8 @@ void AppView::Load(Platform::String^ entryPoint)
 // update, draw, and present loop, and it also oversees window message processing.
 void AppView::Run()
 {
-#ifdef WRITE_VERTICES
-	Platform::String^ folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
-	std::wstring folderW(folder->Begin());
-	std::string folderA(folderW.begin(), folderW.end());
-	std::filesystem::remove_all(folderA);
+#ifdef EXPORT_MESHES
+	Helper::ClearMeshFolder();
 #endif
 
 	while (!m_windowClosed)
@@ -134,7 +131,7 @@ void AppView::Run()
 		{
 			CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessOneAndAllPending);
 		}
-	}
+}
 }
 
 // Terminate events do not cause Uninitialize to be called. It will be called if your IFrameworkView
