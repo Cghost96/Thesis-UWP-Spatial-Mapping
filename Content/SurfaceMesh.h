@@ -14,8 +14,10 @@
 #include "Common\DeviceResources.h"
 #include "Common\Settings.h"
 #include "ShaderStructures.h"
+
 #include <ppltasks.h>
 #include <sstream>
+#include <memory>
 
 namespace SpatialMapping
 {
@@ -58,6 +60,11 @@ namespace SpatialMapping
 		void SetIsActive(const bool& isActive) { m_isActive = isActive; }
 		void SetColorFadeTimer(const float& duration) { m_colorFadeTimeout = duration; m_colorFadeTimer = 0.f; }
 
+		std::shared_ptr<Windows::Storage::Streams::IBuffer^> GetPositionsIBuffer() const { return m_positionsIBuffer; }
+		std::shared_ptr<Windows::Storage::Streams::IBuffer^> GetNormalsIBuffer() const { return m_normalsIBuffer; }
+		std::shared_ptr<Windows::Storage::Streams::IBuffer^> GetIndexIBuffer() const { return m_indexIBuffer; }
+		const SurfaceMeshProperties* GetSurfaceMeshProperties() const { return &m_meshProperties; }
+		int GetId() const { return m_id; }
 
 	private:
 		void SwapVertexBuffers();
@@ -78,6 +85,11 @@ namespace SpatialMapping
 
 		Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ m_pendingSurfaceMesh = nullptr;
 		Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ m_surfaceMesh = nullptr;
+
+		std::shared_ptr<Windows::Storage::Streams::IBuffer^> m_positionsIBuffer = nullptr;
+		std::shared_ptr<Windows::Storage::Streams::IBuffer^> m_normalsIBuffer = nullptr;
+		std::shared_ptr<Windows::Storage::Streams::IBuffer^> m_indexIBuffer = nullptr;
+		int m_id = 0;
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexPositions;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexNormals;
@@ -101,8 +113,6 @@ namespace SpatialMapping
 		float  m_lastActiveTime = -1.f;
 		float  m_colorFadeTimer = -1.f;
 		float  m_colorFadeTimeout = -1.f;
-
-		bool test = true;
 
 		std::mutex m_meshResourcesMutex;
 	};

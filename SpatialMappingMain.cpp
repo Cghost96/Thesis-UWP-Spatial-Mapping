@@ -148,35 +148,37 @@ void SpatialMappingMain::OnSurfacesChanged(
 	SpatialSurfaceObserver^ sender,
 	Object^ args)
 {
-	IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection = sender->GetObservedSurfaces();
+	if (!m_isExportingMeshes) {
+		IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection = sender->GetObservedSurfaces();
 
-	// Process surface adds and updates.
-	for (const auto& pair : surfaceCollection)
-	{
-		auto id = pair->Key;
-		auto surfaceInfo = pair->Value;
-
-		if (m_meshRenderer->HasSurface(id))
+		// Process surface adds and updates.
+		for (const auto& pair : surfaceCollection)
 		{
-			if (m_meshRenderer->GetLastUpdateTime(id).UniversalTime < surfaceInfo->UpdateTime.UniversalTime)
+			auto id = pair->Key;
+			auto surfaceInfo = pair->Value;
+
+			if (m_meshRenderer->HasSurface(id))
 			{
-				// Update existing surface.
-				m_meshRenderer->UpdateSurface(id, surfaceInfo);
+				if (m_meshRenderer->GetLastUpdateTime(id).UniversalTime < surfaceInfo->UpdateTime.UniversalTime)
+				{
+					// Update existing surface.
+					m_meshRenderer->UpdateSurface(id, surfaceInfo);
+				}
+			}
+			else
+			{
+				// New surface.
+				m_meshRenderer->AddSurface(id, surfaceInfo);
 			}
 		}
-		else
-		{
-			// New surface.
-			m_meshRenderer->AddSurface(id, surfaceInfo);
-		}
-	}
 
-	// Sometimes, a mesh will fall outside the area that is currently visible to
-	// the surface observer. In this code sample, we "sleep" any meshes that are
-	// not included in the surface collection to avoid rendering them.
-	// The system can including them in the collection again later, in which case
-	// they will no longer be hidden.
-	m_meshRenderer->HideInactiveMeshes(surfaceCollection);
+		// Sometimes, a mesh will fall outside the area that is currently visible to
+		// the surface observer. In this code sample, we "sleep" any meshes that are
+		// not included in the surface collection to avoid rendering them.
+		// The system can including them in the collection again later, in which case
+		// they will no longer be hidden.
+		m_meshRenderer->HideInactiveMeshes(surfaceCollection);
+	}
 }
 
 // Updates the application state once per frame.
@@ -205,15 +207,14 @@ HolographicFrame^ SpatialMappingMain::Update()
 	SpatialCoordinateSystem^ currentCoordinateSystem = m_referenceFrame->GetStationaryCoordinateSystemAtTimestamp(prediction->Timestamp);
 
 	// Only create a surface observer when you need to - do not create a new one each frame.
-	if (m_surfaceObserver == nullptr)
-	{
+	if (m_surfaceObserver == nullptr) {
 		// Initialize the Surface Observer using a valid coordinate system.
 		if (!m_spatialPerceptionAccessRequested)
 		{
 			// The spatial mapping API reads information about the user's environment. The user must
 			// grant permission to the app to use this capability of the Windows Holographic device.
 			auto initSurfaceObserverTask = create_task(SpatialSurfaceObserver::RequestAccessAsync());
-			initSurfaceObserverTask.then([this, currentCoordinateSystem](Windows::Perception::Spatial::SpatialPerceptionAccessStatus status)
+			initSurfaceObserverTask.then([this, currentCoordinateSystem](SpatialPerceptionAccessStatus status)
 				{
 					switch (status)
 					{
@@ -235,8 +236,13 @@ HolographicFrame^ SpatialMappingMain::Update()
 
 	if (m_surfaceAccessAllowed)
 	{
-		SpatialBoundingVolume^ bounds = SpatialBoundingVolume::FromBox(currentCoordinateSystem, Options::BOUNDING_TYPE);
 
+#ifdef USE_BOUNDING_BOX
+		SpatialBoundingVolume^ bounds = SpatialBoundingVolume::FromBox(currentCoordinateSystem, Options::BOUNDING_BOX);
+#endif
+#ifdef USE_BOUNDING_FRUSTUM
+		SpatialBoundingVolume^ bounds = SpatialBoundingVolume::FromFrustum(currentCoordinateSystem, Options::BOUNDING_FRUSTUM);
+#endif
 		// If status is Allowed, we can create the surface observer.
 		if (m_surfaceObserver == nullptr)
 		{
@@ -269,6 +275,7 @@ HolographicFrame^ SpatialMappingMain::Update()
 			{
 				m_surfaceObserver->SetBoundingVolume(bounds);
 
+				// #TODO Add check for exporting mesh here as well?
 				// If the surface observer was successfully created, we can initialize our
 				// collection by pulling the current data set.
 				auto mapContainingSurfaceCollection = m_surfaceObserver->GetObservedSurfaces();
@@ -285,9 +292,6 @@ HolographicFrame^ SpatialMappingMain::Update()
 					ref new TypedEventHandler<SpatialSurfaceObserver^, Platform::Object^>(
 						bind(&SpatialMappingMain::OnSurfacesChanged, this, _1, _2)
 						);
-
-				// Subscribe to hand-events
-
 			}
 		}
 
@@ -295,11 +299,41 @@ HolographicFrame^ SpatialMappingMain::Update()
 		m_surfaceObserver->SetBoundingVolume(bounds);
 	}
 
-	// Check for new input state since the last frame.
-	SpatialInteractionSourceState^ pointerState = m_spatialInputHandler->CheckForInput();
-	if (pointerState != nullptr)
-	{
-		m_drawWirfeFrame = !m_drawWirfeFrame;
+	if (!m_isExportingMeshes) {
+		// Check for new input state since the last frame.
+		SpatialInteractionSourceState^ pointerState = m_spatialInputHandler->CheckForInput();
+		if (pointerState != nullptr)
+		{
+			if (pointerState->IsGrasped) {
+				switch (pointerState->Source->Handedness)
+				{
+				case SpatialInteractionSourceHandedness::Left:
+					if (!m_isExportingMeshes) {
+						m_isExportingMeshes = true;
+						m_meshRenderer->ExportMeshes(m_isExportingMeshes, currentCoordinateSystem);
+					}
+					break;
+				case SpatialInteractionSourceHandedness::Right:
+
+					break;
+				default:
+					break;
+				}
+			}
+			else if (pointerState->IsSelectPressed) {
+				switch (pointerState->Source->Handedness)
+				{
+				case SpatialInteractionSourceHandedness::Left:
+
+					break;
+				case SpatialInteractionSourceHandedness::Right:
+					m_drawWirfeFrame = !m_drawWirfeFrame;
+					break;
+				default:
+					break;
+				}
+			}
+		}
 	}
 
 	m_timer.Tick([&]()
@@ -366,8 +400,10 @@ bool SpatialMappingMain::Render(
 				// Only render world-locked content when positional tracking is active.
 				if (cameraActive)
 				{
-					// Draw the sample hologram.
-					m_meshRenderer->Render(pCameraResources->IsRenderingStereoscopic(), m_drawWirfeFrame);
+					if (!m_isExportingMeshes) {
+						// Draw the sample hologram.
+						m_meshRenderer->Render(pCameraResources->IsRenderingStereoscopic(), m_drawWirfeFrame);
+					}
 
 					// On versions of the platform that support the CommitDirect3D11DepthBuffer API, we can 
 					// provide the depth buffer to the system, and it will use depth information to stabilize 

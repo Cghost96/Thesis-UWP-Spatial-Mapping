@@ -17,7 +17,7 @@
 #include "Content\ShaderStructures.h"
 
 #include <memory>
-#include <map>
+#include <unordered_map>
 #include <ppltasks.h>
 
 namespace SpatialMapping
@@ -39,6 +39,7 @@ namespace SpatialMapping
 		void UpdateSurface(Platform::Guid id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
 		void RemoveSurface(Platform::Guid id);
 		void ClearSurfaces();
+		void ExportMeshes(bool& isExportingMeshes, Windows::Perception::Spatial::SpatialCoordinateSystem^& const worldCoordinateSystem);
 
 		Windows::Foundation::DateTime GetLastUpdateTime(Platform::Guid id);
 
@@ -48,6 +49,7 @@ namespace SpatialMapping
 
 	private:
 		Concurrency::task<void> AddOrUpdateSurfaceAsync(Platform::Guid id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
+		concurrency::task<void> m_exportMeshesTask = concurrency::task_from_result();
 
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources>            m_deviceResources;
@@ -60,7 +62,7 @@ namespace SpatialMapping
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>       m_colorPixelShader;
 
 		// The set of surfaces in the collection.
-		std::map<Platform::Guid, SurfaceMesh>           m_meshCollection;
+		std::unordered_map<Platform::Guid, SurfaceMesh> m_meshCollection;
 
 		// A way to lock map access.
 		std::mutex                                      m_meshCollectionLock;

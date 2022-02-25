@@ -11,19 +11,26 @@
 
 #include "pch.h"
 
+#include <string>
+#include <fstream>
+
+#include <DirectXPackedVector.h>
 
 #include "Common\DirectXHelper.h"
 #include "RealtimeSurfaceMeshRenderer.h"
+#include "GetDataFromIBuffer.h"
 
 using namespace SpatialMapping;
 
 using namespace Concurrency;
 using namespace DX;
+using namespace DirectX;
+using namespace PackedVector;
 using namespace Windows::Foundation::Collections;
 using namespace Windows::Foundation::Numerics;
 using namespace Windows::Perception::Spatial;
 using namespace Windows::Perception::Spatial::Surfaces;
-
+using namespace Windows::Storage;
 using namespace Platform;
 
 RealtimeSurfaceMeshRenderer::RealtimeSurfaceMeshRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources) :
@@ -384,4 +391,56 @@ Windows::Foundation::DateTime RealtimeSurfaceMeshRenderer::GetLastUpdateTime(Pla
 		static const Windows::Foundation::DateTime zero;
 		return zero;
 	}
+}
+
+void RealtimeSurfaceMeshRenderer::ExportMeshes(bool& isExportingMeshes, SpatialCoordinateSystem^& const worldCoordinateSystem)
+{
+	m_exportMeshesTask.then([this, worldCoordinateSystem, isExportingMeshes]() {
+		ApplicationData::Current->LocalFolder->CreateFolderAsync("Meshes", CreationCollisionOption::FailIfExists);
+		String^ folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
+		std::wstring folderW(folder->Begin());
+		std::string folderA(folderW.begin(), folderW.end());
+		const char* charStr = folderA.c_str();
+		char file[512];
+		std::snprintf(file, 512, "%s\\meshes.obj", charStr);
+		std::ofstream fileOut(file, std::ios::out);
+
+		std::lock_guard<std::mutex> guard(m_meshCollectionLock);
+
+		for (auto& const kv : m_meshCollection)
+		{
+			auto& const id = kv.first;
+			auto& const mesh = kv.second;
+
+			fileOut << "o mesh_" << mesh.GetId() << "\n";
+
+			const SurfaceMeshProperties* meshProperties = mesh.GetSurfaceMeshProperties();
+			SpatialCoordinateSystem^ const meshCoordSystem = meshProperties->coordinateSystem;
+			IBox<float4x4>^ const surfCoordSysToWorld = meshCoordSystem->TryGetTransformTo(worldCoordinateSystem);
+
+			if (surfCoordSysToWorld != nullptr) {
+				auto const positionsIBuffer = mesh.GetPositionsIBuffer();
+				auto const normalsIBuffer = mesh.GetNormalsIBuffer();
+				auto const indexIBuffer = mesh.GetIndexIBuffer();
+
+				if (positionsIBuffer != nullptr && normalsIBuffer != nullptr && indexIBuffer != nullptr) {
+
+					XMSHORTN4* const positions = GetDataFromIBuffer<XMSHORTN4>(*positionsIBuffer);
+
+
+					XMBYTEN4* const normals = GetDataFromIBuffer<XMBYTEN4>(*normalsIBuffer);
+
+
+#ifdef USE_32BIT_INDICES
+					uint32_t* const indices = GetDataFromIBuffer<uint32_t>(*indexIBuffer);
+
+#else
+					uint16_t* const indices = GetDataFromIBuffer<uint16_t>(*indexIBuffer);
+
+#endif // USE_32BIT_INDICES
+				}
+			}
+		}
+		isExportingMeshes = false;
+	});
 }

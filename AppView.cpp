@@ -11,6 +11,7 @@
 
 #include "pch.h"
 #include "AppView.h"
+#include "Common/Helper.h"
 
 #include <filesystem>
 
@@ -108,9 +109,7 @@ void AppView::Load(Platform::String^ entryPoint)
 // update, draw, and present loop, and it also oversees window message processing.
 void AppView::Run()
 {
-#ifdef EXPORT_MESHES
 	Helper::ClearMeshFolder();
-#endif
 
 	while (!m_windowClosed)
 	{
@@ -131,7 +130,7 @@ void AppView::Run()
 		{
 			CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessOneAndAllPending);
 		}
-}
+	}
 }
 
 // Terminate events do not cause Uninitialize to be called. It will be called if your IFrameworkView

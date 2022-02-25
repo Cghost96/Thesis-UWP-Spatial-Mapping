@@ -13,9 +13,6 @@
 
 #include <ppltasks.h>
 
-#include <string>
-#include <fstream>
-
 #include <DirectXCollision.h>
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
@@ -190,7 +187,7 @@ void SurfaceMesh::Draw(
 
 	UINT strides[] = { m_meshProperties.vertexStride, m_meshProperties.normalStride };
 	UINT offsets[] = { 0, 0 };
-	ID3D11Buffer* buffers[] = { m_vertexPositions.Get(), m_vertexNormals.Get() };
+	ID3D11Buffer* buffers[] = { GetVertexPositions().Get(), GetVertexNormals().Get() };
 
 	context->IASetVertexBuffers(
 		0,
@@ -201,7 +198,7 @@ void SurfaceMesh::Draw(
 	);
 
 	context->IASetIndexBuffer(
-		m_triangleIndices.Get(),
+		GetTriangleIndices().Get(),
 		m_meshProperties.indexFormat,
 		0
 	);
@@ -252,13 +249,9 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 {
 	if (currentCoordSys != nullptr)
 	{
-#ifdef SCALE_POSITIONS
 		float3 const pScale = surface->VertexPositionScale;
-#ifdef TRANSFORM_POSITIONS
 		SpatialCoordinateSystem^ const surfCoordSys = surface->CoordinateSystem;
 		Platform::IBox<float4x4>^ const surfCoordSysToWorld = surfCoordSys->TryGetTransformTo(currentCoordSys);
-#endif
-#ifdef EXPORT_MESHES
 		ApplicationData::Current->LocalFolder->CreateFolderAsync("Meshes", CreationCollisionOption::FailIfExists);
 		Platform::String^ folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
 
@@ -269,8 +262,6 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 		unsigned int hash = (unsigned int)surface->GetHashCode();
 		std::snprintf(file, 512, "%s\\mesh_%d.obj", charStr, hash);
 		std::ofstream fileOut(file, std::ios::out);
-#endif
-#endif
 
 		unsigned int const pCount = surface->VertexPositions->ElementCount;
 		XMSHORTN4* const pBytes = GetDataFromIBuffer<XMSHORTN4>(positions);
@@ -281,28 +272,13 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 				XMVECTOR const vec = XMLoadShortN4(&pBytes[i]);
 				XMStoreFloat4(&p, vec);
 
-#ifdef SCALE_POSITIONS
 				XMFLOAT4 const ps = XMFLOAT4(p.x * pScale.x, p.y * pScale.y, p.z * pScale.z, p.w);
-#ifdef TRANSFORM_POSITIONS
 				float3 const t = transform(float3(ps.x, ps.y, ps.z), surfCoordSysToWorld->Value);
 				XMFLOAT4 const pst = XMFLOAT4(t.x, t.y, t.z, ps.w);
-#ifdef EXPORT_MESHES
 				fileOut << "v " << pst.x << " " << pst.y << " " << pst.z << "\n";
-#endif
-#else
-#ifdef EXPORT_MESHES
-				fileOut << "v " << ps.x << " " << ps.y << " " << ps.z << "\n";
-#endif
-#endif
-
-#endif
-
 			}
 
-#ifdef EXPORT_MESHES
 			fileOut << "\n\n";
-#endif
-
 		}
 
 #ifdef USE_32BIT_INDICES
@@ -312,23 +288,18 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 		if (iBytes != nullptr) {
 			for (uint32_t i = 0; i < iCount; i += 3)
 			{
-#ifdef EXPORT_MESHES
 				// +1 to get .obj format
 				uint32_t const iOne = iBytes[i] + 1;
 				uint32_t const iTwo = iBytes[i + 1] + 1;
 				uint32_t const iThree = iBytes[i + 2] + 1;
 
 				fileOut << "f " << iOne << " " << iTwo << " " << iThree << "\n";
-#else
 				uint32_t const iOne = iBytes[i];
 				uint32_t const iTwo = iBytes[i + 1];
 				uint32_t const iThree = iBytes[i + 2];
-#endif
 			}
 		}
-#ifdef EXPORT_MESHES
 		fileOut.close();
-#endif
 #else
 		unsigned int const iCount = surface->TriangleIndices->ElementCount;
 		uint16_t* const iBytes = GetDataFromIBuffer<uint16_t>(indices);
@@ -336,26 +307,21 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 		if (iBytes != nullptr) {
 			for (uint16_t i = 0; i < iCount; i += 3)
 			{
-#ifdef EXPORT_MESHES
 				// +1 to get .obj format
 				uint16_t const iOne = iBytes[i] + 1;
 				uint16_t const iTwo = iBytes[i + 1] + 1;
 				uint16_t const iThree = iBytes[i + 2] + 1;
 
 				fileOut << "f " << iOne << " " << iTwo << " " << iThree << "\n";
-#else
 				uint16_t const iOne = iBytes[i];
 				uint16_t const iTwo = iBytes[i + 1];
 				uint16_t const iThree = iBytes[i + 2];
 #endif
 			}
-	}
+		}
 
-#ifdef EXPORT_MESHES
 		fileOut.close();
-#endif
-#endif
-}
+	}
 }
 
 void SurfaceMesh::UpdateVertexResources(
@@ -375,9 +341,14 @@ void SurfaceMesh::UpdateVertexResources(
 			// for now, and then swapped into the active slot next time the render loop is ready to draw.
 
 			// First, we acquire the raw data buffers.
-			Windows::Storage::Streams::IBuffer^ positions = surfaceMesh->VertexPositions->Data;
-			Windows::Storage::Streams::IBuffer^ normals = surfaceMesh->VertexNormals->Data;
-			Windows::Storage::Streams::IBuffer^ indices = surfaceMesh->TriangleIndices->Data;
+			IBuffer^ positions = surfaceMesh->VertexPositions->Data;
+			IBuffer^ normals = surfaceMesh->VertexNormals->Data;
+			IBuffer^ indices = surfaceMesh->TriangleIndices->Data;
+
+			m_positionsIBuffer = std::make_shared<IBuffer^>(positions);
+			m_normalsIBuffer = std::make_shared<IBuffer^>(normals);
+			m_indexIBuffer = std::make_shared<IBuffer^>(indices);
+			m_id = surfaceMesh->GetHashCode();
 
 #ifdef PROCESS_MESH
 			CalculateRegression(surfaceMesh, positions, normals, indices, coordSystem);
