@@ -247,81 +247,7 @@ void SurfaceMesh::CreateDirectXBuffer(
 void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& positions,
 	IBuffer^& normals, IBuffer^& indices, SpatialCoordinateSystem^ currentCoordSys)
 {
-//	if (currentCoordSys != nullptr)
-//	{
-//		float3 const pScale = surface->VertexPositionScale;
-//		SpatialCoordinateSystem^ const surfCoordSys = surface->CoordinateSystem;
-//		Platform::IBox<float4x4>^ const surfCoordSysToWorld = surfCoordSys->TryGetTransformTo(currentCoordSys);
-//		ApplicationData::Current->LocalFolder->CreateFolderAsync("Meshes", CreationCollisionOption::FailIfExists);
-//		Platform::String^ folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
-//
-//		std::wstring folderW(folder->Begin());
-//		std::string folderA(folderW.begin(), folderW.end());
-//		const char* charStr = folderA.c_str();
-//		char file[512];
-//		unsigned int hash = (unsigned int)surface->GetHashCode();
-//		std::snprintf(file, 512, "%s\\mesh_%d.obj", charStr, hash);
-//		std::ofstream fileOut(file, std::ios::out);
-//
-//		unsigned int const pCount = surface->VertexPositions->ElementCount;
-//		XMSHORTN4* const pBytes = GetDataFromIBuffer<XMSHORTN4>(positions);
-//		if (pBytes != nullptr) {
-//			for (int i = 0; i < pCount; i++)
-//			{
-//				XMFLOAT4 p;
-//				XMVECTOR const vec = XMLoadShortN4(&pBytes[i]);
-//				XMStoreFloat4(&p, vec);
-//
-//				XMFLOAT4 const ps = XMFLOAT4(p.x * pScale.x, p.y * pScale.y, p.z * pScale.z, p.w);
-//				float3 const t = transform(float3(ps.x, ps.y, ps.z), surfCoordSysToWorld->Value);
-//				XMFLOAT4 const pst = XMFLOAT4(t.x, t.y, t.z, ps.w);
-//				fileOut << "v " << pst.x << " " << pst.y << " " << pst.z << "\n";
-//			}
-//
-//			fileOut << "\n\n";
-//		}
-//
-//#ifdef USE_32BIT_INDICES
-//		unsigned int const iCount = surface->TriangleIndices->ElementCount;
-//		uint32_t* const iBytes = GetDataFromIBuffer<uint32_t>(indices);
-//
-//		if (iBytes != nullptr) {
-//			for (uint32_t i = 0; i < iCount; i += 3)
-//			{
-//				// +1 to get .obj format
-//				uint32_t const iOne = iBytes[i] + 1;
-//				uint32_t const iTwo = iBytes[i + 1] + 1;
-//				uint32_t const iThree = iBytes[i + 2] + 1;
-//
-//				fileOut << "f " << iOne << " " << iTwo << " " << iThree << "\n";
-//				uint32_t const iOne = iBytes[i];
-//				uint32_t const iTwo = iBytes[i + 1];
-//				uint32_t const iThree = iBytes[i + 2];
-//			}
-//		}
-//		fileOut.close();
-//#else
-//		unsigned int const iCount = surface->TriangleIndices->ElementCount;
-//		uint16_t* const iBytes = GetDataFromIBuffer<uint16_t>(indices);
-//
-//		if (iBytes != nullptr) {
-//			for (uint16_t i = 0; i < iCount; i += 3)
-//			{
-//				// +1 to get .obj format
-//				uint16_t const iOne = iBytes[i] + 1;
-//				uint16_t const iTwo = iBytes[i + 1] + 1;
-//				uint16_t const iThree = iBytes[i + 2] + 1;
-//
-//				fileOut << "f " << iOne << " " << iTwo << " " << iThree << "\n";
-//				uint16_t const iOne = iBytes[i];
-//				uint16_t const iTwo = iBytes[i + 1];
-//				uint16_t const iThree = iBytes[i + 2];
-//#endif
-//			}
-//		}
-//
-//		fileOut.close();
-//	}
+
 }
 
 void SurfaceMesh::UpdateVertexResources(
@@ -376,7 +302,6 @@ void SurfaceMesh::UpdateVertexResources(
 					m_indexIBuffer = std::make_shared<IBuffer^>(indices);
 
 					// Cache properties
-					m_updatedMeshProperties.id = surfaceMesh->GetHashCode();
 					m_updatedMeshProperties.coordinateSystem = surfaceMesh->CoordinateSystem;
 					m_updatedMeshProperties.vertexPositionScale = surfaceMesh->VertexPositionScale;
 					m_updatedMeshProperties.vertexStride = surfaceMesh->VertexPositions->Stride;

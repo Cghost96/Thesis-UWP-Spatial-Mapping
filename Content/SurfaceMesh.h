@@ -23,7 +23,6 @@ namespace SpatialMapping
 {
 	struct SurfaceMeshProperties
 	{
-		int id = 0;
 		Windows::Perception::Spatial::SpatialCoordinateSystem^ coordinateSystem = nullptr;
 		Windows::Foundation::Numerics::float3 vertexPositionScale = Windows::Foundation::Numerics::float3::one();
 		unsigned int vertexStride = 0;

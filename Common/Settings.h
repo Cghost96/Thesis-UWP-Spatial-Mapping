@@ -6,19 +6,14 @@ using namespace Windows::Foundation::Numerics;
 #define PROCESS_MESH
 //#undef PROCESS_MESH
 
-#define SCALE_POSITIONS
-#undef SCALE_POSITIONS
-
-#ifdef SCALE_POSITIONS
-#define TRANSFORM_POSITIONS
-#undef TRANSFORM_POSITIONS
-
-#define EXPORT_MESHES
-#undef EXPORT_MESHES
-#endif
-
 #define HIGHLIGHT_NEW_MESHES
 #undef HIGHLIGHT_NEW_MESHES
+
+#define EXPORT_ASYNC
+#undef EXPORT_ASYNC
+
+#define EXPORT_NORMALS
+#undef EXPORT_NORMALS
 
 // If you are using a very high detail setting with spatial mapping, it can be beneficial
 // to use a 32-bit unsigned integer format for indices instead of the default 16-bit. 
@@ -31,10 +26,8 @@ using namespace Windows::Foundation::Numerics;
 #define USE_BOUNDING_FRUSTUM
 #undef USE_BOUNDING_FRUSTUM
 
-// #TODO Move write vertices into helper file
 // #TODO Move mesh processing into separate file
 // #TODO Remote computing
-// #TODO Export function with hand input (export all in one file as separate objects)
 // #TODO Use scene understanding to extract measurements of objects? (in order to get some practical functionality of the device)
 // #TODO Implement coloring-options of surfaces
 
