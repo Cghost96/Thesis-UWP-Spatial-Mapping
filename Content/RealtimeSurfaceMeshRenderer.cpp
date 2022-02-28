@@ -148,7 +148,7 @@ void RealtimeSurfaceMeshRenderer::HideInactiveMeshes(IMapView<Guid, SpatialSurfa
 		const auto& id = pair.first;
 		auto& surfaceMesh = pair.second;
 
-		surfaceMesh.SetIsActive(surfaceCollection->HasKey(id) ? true : false);
+		surfaceMesh.SetIsActive(surfaceCollection->HasKey(id));
 	};
 }
 
@@ -393,54 +393,93 @@ Windows::Foundation::DateTime RealtimeSurfaceMeshRenderer::GetLastUpdateTime(Pla
 	}
 }
 
-void RealtimeSurfaceMeshRenderer::ExportMeshes(bool& isExportingMeshes, SpatialCoordinateSystem^& const worldCoordinateSystem)
+void RealtimeSurfaceMeshRenderer::ExportMeshes(SpatialCoordinateSystem^& const worldCoordinateSystem)
 {
-	m_exportMeshesTask.then([this, worldCoordinateSystem, isExportingMeshes]() {
-		ApplicationData::Current->LocalFolder->CreateFolderAsync("Meshes", CreationCollisionOption::FailIfExists);
-		String^ folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
-		std::wstring folderW(folder->Begin());
-		std::string folderA(folderW.begin(), folderW.end());
-		const char* charStr = folderA.c_str();
-		char file[512];
-		std::snprintf(file, 512, "%s\\meshes.obj", charStr);
-		std::ofstream fileOut(file, std::ios::out);
+	//m_exportMeshesTask.then([this, worldCoordinateSystem]()
+		//{
+	ApplicationData::Current->LocalFolder->CreateFolderAsync("Meshes", CreationCollisionOption::FailIfExists);
+	String^ folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
+	std::wstring folderW(folder->Begin());
+	std::string folderA(folderW.begin(), folderW.end());
+	const char* charStr = folderA.c_str();
+	char file[512];
+	std::snprintf(file, 512, "%s\\meshes.obj", charStr);
+	std::ofstream fileOut(file, std::ios::out);
 
-		std::lock_guard<std::mutex> guard(m_meshCollectionLock);
+	std::lock_guard<std::mutex> guard(m_meshCollectionLock);
 
-		for (auto& const kv : m_meshCollection)
-		{
-			auto& const id = kv.first;
-			auto& const mesh = kv.second;
+	for (auto& const kvPair : m_meshCollection)
+	{
+		auto& const id = kvPair.first;
+		auto& const mesh = kvPair.second;
 
-			fileOut << "o mesh_" << mesh.GetId() << "\n";
+		const SurfaceMeshProperties* meshProperties = mesh.GetSurfaceMeshProperties();
+		SpatialCoordinateSystem^ const meshCoordSystem = meshProperties->coordinateSystem;
+		IBox<float4x4>^ const surfCoordSysToWorld = meshCoordSystem->TryGetTransformTo(worldCoordinateSystem);
 
-			const SurfaceMeshProperties* meshProperties = mesh.GetSurfaceMeshProperties();
-			SpatialCoordinateSystem^ const meshCoordSystem = meshProperties->coordinateSystem;
-			IBox<float4x4>^ const surfCoordSysToWorld = meshCoordSystem->TryGetTransformTo(worldCoordinateSystem);
+		if (surfCoordSysToWorld != nullptr) {
+			auto const positionsIBuffer = mesh.GetPositionsIBuffer();
+			auto const normalsIBuffer = mesh.GetNormalsIBuffer();
+			auto const indexIBuffer = mesh.GetIndexIBuffer();
 
-			if (surfCoordSysToWorld != nullptr) {
-				auto const positionsIBuffer = mesh.GetPositionsIBuffer();
-				auto const normalsIBuffer = mesh.GetNormalsIBuffer();
-				auto const indexIBuffer = mesh.GetIndexIBuffer();
+			if (positionsIBuffer != nullptr && normalsIBuffer != nullptr && indexIBuffer != nullptr) {
+				fileOut << "\no mesh_" << meshProperties->id << "\n\n";
 
-				if (positionsIBuffer != nullptr && normalsIBuffer != nullptr && indexIBuffer != nullptr) {
+				XMSHORTN4* const positions = GetDataFromIBuffer<XMSHORTN4>(*positionsIBuffer);
+				float3 const posScale = meshProperties->vertexPositionScale;
+				for (int i = 0; i < meshProperties->posCount; i++)
+				{
+					XMFLOAT4 p;
+					XMVECTOR const vec = XMLoadShortN4(&positions[i]);
+					XMStoreFloat4(&p, vec);
 
-					XMSHORTN4* const positions = GetDataFromIBuffer<XMSHORTN4>(*positionsIBuffer);
+					XMFLOAT4 const ps = XMFLOAT4(p.x * posScale.x, p.y * posScale.y, p.z * posScale.z, p.w);
+					float3 const t = transform(float3(ps.x, ps.y, ps.z), surfCoordSysToWorld->Value);
+					XMFLOAT4 const pst = XMFLOAT4(t.x, t.y, t.z, ps.w);
+					fileOut << "v " << pst.x << " " << pst.y << " " << pst.z << "\n";
+				}
 
+				fileOut << "\n";
 
-					XMBYTEN4* const normals = GetDataFromIBuffer<XMBYTEN4>(*normalsIBuffer);
+				XMBYTEN4* const normals = GetDataFromIBuffer<XMBYTEN4>(*normalsIBuffer);
+				for (int i = 0; i < meshProperties->normalCount; i++)
+				{
+					XMFLOAT4 n;
+					XMVECTOR const vec = XMLoadByteN4(&normals[i]);
+					XMStoreFloat4(&n, vec);
 
+					fileOut << "vn " << n.x << " " << n.y << " " << n.z << "\n";
+				}
+
+				fileOut << "\n";
 
 #ifdef USE_32BIT_INDICES
-					uint32_t* const indices = GetDataFromIBuffer<uint32_t>(*indexIBuffer);
+				uint32_t* const indices = GetDataFromIBuffer<uint32_t>(*indexIBuffer);
+				for (int i = 0; i < meshProperties->indexCount; i += 3)
+				{
+					// +1 to get .obj format
+					uint32_t const iOne = indices[i] + 1;
+					uint32_t const iTwo = indices[i + 1] + 1;
+					uint32_t const iThree = indices[i + 2] + 1;
 
-#else
-					uint16_t* const indices = GetDataFromIBuffer<uint16_t>(*indexIBuffer);
-
-#endif // USE_32BIT_INDICES
+					fileOut << "f " << iOne << " " << iTwo << " " << iThree << "\n";
 				}
+#else
+				uint16_t* const indices = GetDataFromIBuffer<uint16_t>(*indexIBuffer);
+				for (int i = 0; i < meshProperties->indexCount; i += 3)
+				{
+					// +1 to get .obj format
+					uint16_t const iOne = indices[i] + 1;
+					uint16_t const iTwo = indices[i + 1] + 1;
+					uint16_t const iThree = indices[i + 2] + 1;
+
+					fileOut << "f " << iOne << " " << iTwo << " " << iThree << "\n";
+				}
+#endif // USE_32BIT_INDICES
 			}
 		}
-		isExportingMeshes = false;
-	});
+		fileOut.close();
+	}
+	SetIsExportingMeshes(false);
+	//});
 }

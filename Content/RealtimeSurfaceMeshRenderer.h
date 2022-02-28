@@ -17,7 +17,7 @@
 #include "Content\ShaderStructures.h"
 
 #include <memory>
-#include <unordered_map>
+#include <map>
 #include <ppltasks.h>
 
 namespace SpatialMapping
@@ -39,13 +39,16 @@ namespace SpatialMapping
 		void UpdateSurface(Platform::Guid id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
 		void RemoveSurface(Platform::Guid id);
 		void ClearSurfaces();
-		void ExportMeshes(bool& isExportingMeshes, Windows::Perception::Spatial::SpatialCoordinateSystem^& const worldCoordinateSystem);
+		void ExportMeshes(Windows::Perception::Spatial::SpatialCoordinateSystem^& const worldCoordinateSystem);
 
 		Windows::Foundation::DateTime GetLastUpdateTime(Platform::Guid id);
 
 		void HideInactiveMeshes(
 			Windows::Foundation::Collections::IMapView<Platform::Guid,
 			Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^>^ const& surfaceCollection);
+
+		bool GetIsExportingMeshes() const { return m_isExportingMeshes; }
+		void SetIsExportingMeshes(bool const val) { m_isExportingMeshes = val; }
 
 	private:
 		Concurrency::task<void> AddOrUpdateSurfaceAsync(Platform::Guid id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
@@ -61,8 +64,8 @@ namespace SpatialMapping
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>       m_lightingPixelShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>       m_colorPixelShader;
 
-		// The set of surfaces in the collection.
-		std::unordered_map<Platform::Guid, SurfaceMesh> m_meshCollection;
+		// #TODO Implement as unordered_map?
+		std::map<Platform::Guid, SurfaceMesh> m_meshCollection;
 
 		// A way to lock map access.
 		std::mutex                                      m_meshCollectionLock;
@@ -88,6 +91,7 @@ namespace SpatialMapping
 		const float c_surfaceMeshFadeInTime = Options::MESH_FADE_IN_TIME;
 
 		bool m_loadingComplete;
+		bool m_isExportingMeshes = false;
 	};
 };
 

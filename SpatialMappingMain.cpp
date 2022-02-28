@@ -148,7 +148,7 @@ void SpatialMappingMain::OnSurfacesChanged(
 	SpatialSurfaceObserver^ sender,
 	Object^ args)
 {
-	if (!m_isExportingMeshes) {
+	if (!m_meshRenderer->GetIsExportingMeshes()) {
 		IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection = sender->GetObservedSurfaces();
 
 		// Process surface adds and updates.
@@ -299,7 +299,7 @@ HolographicFrame^ SpatialMappingMain::Update()
 		m_surfaceObserver->SetBoundingVolume(bounds);
 	}
 
-	if (!m_isExportingMeshes) {
+	if (!m_meshRenderer->GetIsExportingMeshes()) {
 		// Check for new input state since the last frame.
 		SpatialInteractionSourceState^ pointerState = m_spatialInputHandler->CheckForInput();
 		if (pointerState != nullptr)
@@ -308,9 +308,9 @@ HolographicFrame^ SpatialMappingMain::Update()
 				switch (pointerState->Source->Handedness)
 				{
 				case SpatialInteractionSourceHandedness::Left:
-					if (!m_isExportingMeshes) {
-						m_isExportingMeshes = true;
-						m_meshRenderer->ExportMeshes(m_isExportingMeshes, currentCoordinateSystem);
+					if (!m_meshRenderer->GetIsExportingMeshes()) {
+						m_meshRenderer->SetIsExportingMeshes(true);
+						m_meshRenderer->ExportMeshes(currentCoordinateSystem);
 					}
 					break;
 				case SpatialInteractionSourceHandedness::Right:
@@ -400,7 +400,7 @@ bool SpatialMappingMain::Render(
 				// Only render world-locked content when positional tracking is active.
 				if (cameraActive)
 				{
-					if (!m_isExportingMeshes) {
+					if (!m_meshRenderer->GetIsExportingMeshes()) {
 						// Draw the sample hologram.
 						m_meshRenderer->Render(pCameraResources->IsRenderingStereoscopic(), m_drawWirfeFrame);
 					}

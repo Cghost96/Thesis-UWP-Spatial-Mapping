@@ -23,10 +23,13 @@ namespace SpatialMapping
 {
 	struct SurfaceMeshProperties
 	{
+		int id = 0;
 		Windows::Perception::Spatial::SpatialCoordinateSystem^ coordinateSystem = nullptr;
 		Windows::Foundation::Numerics::float3 vertexPositionScale = Windows::Foundation::Numerics::float3::one();
 		unsigned int vertexStride = 0;
+		unsigned int posCount = 0;
 		unsigned int normalStride = 0;
+		unsigned int normalCount = 0;
 		unsigned int indexCount = 0;
 		DXGI_FORMAT  indexFormat = DXGI_FORMAT_UNKNOWN;
 	};
@@ -64,7 +67,10 @@ namespace SpatialMapping
 		std::shared_ptr<Windows::Storage::Streams::IBuffer^> GetNormalsIBuffer() const { return m_normalsIBuffer; }
 		std::shared_ptr<Windows::Storage::Streams::IBuffer^> GetIndexIBuffer() const { return m_indexIBuffer; }
 		const SurfaceMeshProperties* GetSurfaceMeshProperties() const { return &m_meshProperties; }
-		int GetId() const { return m_id; }
+
+		Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexPositions() const { return m_vertexPositions; }
+		Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexNormals() const { return m_vertexNormals; }
+		Microsoft::WRL::ComPtr<ID3D11Buffer> GetTriangleIndices() const { return m_triangleIndices; }
 
 	private:
 		void SwapVertexBuffers();
@@ -89,7 +95,6 @@ namespace SpatialMapping
 		std::shared_ptr<Windows::Storage::Streams::IBuffer^> m_positionsIBuffer = nullptr;
 		std::shared_ptr<Windows::Storage::Streams::IBuffer^> m_normalsIBuffer = nullptr;
 		std::shared_ptr<Windows::Storage::Streams::IBuffer^> m_indexIBuffer = nullptr;
-		int m_id = 0;
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexPositions;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexNormals;

@@ -212,8 +212,6 @@ copy "$(SolutionDir)Assets\" "$(TargetDir)AppX\Assets\"</Command>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <BrowseInformation>true</BrowseInformation>
-      <Optimization>MaxSpeed</Optimization>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <PostBuildEvent>
       <Command>mkdir "$(TargetDir)AppX\Assets\"
