@@ -19,6 +19,7 @@
 #include "Common\DirectXHelper.h"
 #include "RealtimeSurfaceMeshRenderer.h"
 #include "GetDataFromIBuffer.h"
+#include "Common/Helper.h"
 
 using namespace SpatialMapping;
 
@@ -38,6 +39,7 @@ RealtimeSurfaceMeshRenderer::RealtimeSurfaceMeshRenderer(const std::shared_ptr<D
 {
 	CreateDeviceDependentResources();
 };
+
 
 // Called once per frame, maintains and updates the mesh collection.
 void RealtimeSurfaceMeshRenderer::Update(
@@ -399,6 +401,7 @@ void RealtimeSurfaceMeshRenderer::ExportMeshes(SpatialCoordinateSystem^& const w
 	m_exportMeshesTask.then([this, worldCoordinateSystem]()
 		{
 #endif // EXPORT_ASYNC
+			Helper::LogMessage<std::string>("-------------------------Started to export--------------------------");
 			ApplicationData::Current->LocalFolder->CreateFolderAsync("Meshes", CreationCollisionOption::FailIfExists);
 			String^ folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
 			std::wstring folderW(folder->Begin());
@@ -410,84 +413,62 @@ void RealtimeSurfaceMeshRenderer::ExportMeshes(SpatialCoordinateSystem^& const w
 
 			int mesh_counter = 1;
 
-			std::lock_guard<std::mutex> guard(m_meshCollectionLock);
-			for (auto& const kvPair : m_meshCollection)
 			{
-				auto& const id = kvPair.first;
-				auto& const mesh = kvPair.second;
+				std::lock_guard<std::mutex> guard(m_meshCollectionLock);
 
-				const SurfaceMeshProperties* meshProperties = mesh.GetSurfaceMeshProperties();
-				SpatialCoordinateSystem^ const meshCoordSystem = meshProperties->coordinateSystem;
-				IBox<float4x4>^ const surfCoordSysToWorld = meshCoordSystem->TryGetTransformTo(worldCoordinateSystem);
+				for (auto iter = m_meshCollection.begin(); iter != m_meshCollection.end();)
+				{
+					auto& const pair = *iter;
+					auto& const mesh = pair.second;
 
-				if (surfCoordSysToWorld) {
-					auto const positionsIBuffer = mesh.GetPositionsIBuffer();
-					auto const normalsIBuffer = mesh.GetNormalsIBuffer();
-					auto const indexIBuffer = mesh.GetIndexIBuffer();
+					if (mesh.CanExport()) {
+						auto const positions = mesh.GetExportPositions();
+						auto const indexIBuffer = mesh.GetIndexIBuffer();
 
-					if (positionsIBuffer != nullptr && normalsIBuffer != nullptr && indexIBuffer != nullptr) {
-						fileOut << "\no mesh_" << mesh_counter << "\n\n";
+						if (positions->size() > 0 && indexIBuffer != nullptr) {
+							fileOut << "\no mesh_" << mesh_counter << "\n\n";
 
-						XMSHORTN4* const positions = GetDataFromIBuffer<XMSHORTN4>(*positionsIBuffer);
-						float3 const posScale = meshProperties->vertexPositionScale;
-						for (int i = 0; i < meshProperties->posCount; i++)
-						{
-							XMFLOAT4 p;
-							XMVECTOR const vec = XMLoadShortN4(&positions[i]);
-							XMStoreFloat4(&p, vec);
+							for (auto const p : *positions) {
+								fileOut << "v " << p.x << " " << p.y << " " << p.z << "\n";
+							}
 
-							XMFLOAT4 const ps = XMFLOAT4(p.x * posScale.x, p.y * posScale.y, p.z * posScale.z, p.w);
-							float3 const t = transform(float3(ps.x, ps.y, ps.z), surfCoordSysToWorld->Value);
-							XMFLOAT4 const pst = XMFLOAT4(t.x, t.y, t.z, p.w);
-							fileOut << "v " << pst.x << " " << pst.y << " " << pst.z << "\n";
-						}
+							fileOut << "\n";
 
-						fileOut << "\n";
-
-#ifdef EXPORT_NORMALS
-						XMBYTEN4* const normals = GetDataFromIBuffer<XMBYTEN4>(*normalsIBuffer);
-						for (int i = 0; i < meshProperties->normalCount; i++)
-						{
-							XMFLOAT4 n;
-							XMVECTOR const vec = XMLoadByteN4(&normals[i]);
-							XMStoreFloat4(&n, vec);
-
-							fileOut << "vn " << n.x << " " << n.y << " " << n.z << "\n";
-						}
-
-						fileOut << "\n";
-#endif
+							//						XMBYTEN4* const normals = GetDataFromIBuffer<XMBYTEN4>(*normalsIBuffer);
+							//						for (int i = 0; i < meshProperties->normalCount; i++)
+							//						{
+							//							XMFLOAT4 n;
+							//							XMVECTOR const vec = XMLoadByteN4(&normals[i]);
+							//							XMStoreFloat4(&n, vec);
+							//						}
 
 #ifdef USE_32BIT_INDICES
-						uint32_t* const indices = GetDataFromIBuffer<uint32_t>(*indexIBuffer);
-						for (int i = 0; i < meshProperties->indexCount; i += 3)
-						{
-							// +1 to get .obj format
-							uint32_t const iOne = indices[i] + 1;
-							uint32_t const iTwo = indices[i + 1] + 1;
-							uint32_t const iThree = indices[i + 2] + 1;
-
-							fileOut << "f " << iOne << " " << iTwo << " " << iThree << "\n";
-						}
+							using IndexFormat = uint32_t;
 #else
-						uint16_t* const indices = GetDataFromIBuffer<uint16_t>(*indexIBuffer);
-						for (int i = 0; i < meshProperties->indexCount; i += 3)
-						{
-							// +1 to get .obj format
-							uint16_t const iOne = indices[i] + 1;
-							uint16_t const iTwo = indices[i + 1] + 1;
-							uint16_t const iThree = indices[i + 2] + 1;
-
-							fileOut << "f " << iOne << " " << iTwo << " " << iThree << "\n";
-						}
+							using IndexFormat = uint16_t;
 #endif // USE_32BIT_INDICES
+							IndexFormat* const indices = GetDataFromIBuffer<IndexFormat>(*indexIBuffer);
+							auto const indexCount = mesh.GetSurfaceMeshProperties()->indexCount;
+
+							for (int i = 0; i < indexCount; i += 3)
+							{
+								// +1 to get .obj format
+								IndexFormat const iOne = indices[i] + 1;
+								IndexFormat const iTwo = indices[i + 1] + 1;
+								IndexFormat const iThree = indices[i + 2] + 1;
+
+								fileOut << "f " << iOne << " " << iTwo << " " << iThree << "\n";
+							}
+						}
+						++mesh_counter;
+						++iter;
 					}
 				}
-				mesh_counter++;
 			}
+			Helper::LogMessage<std::string>("-------------------------Finished exporting--------------------------");
 			fileOut.close();
 			SetIsExportingMeshes(false);
 #ifdef EXPORT_ASYNC
-		});
+});
 #endif
 }

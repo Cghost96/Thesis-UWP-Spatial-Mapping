@@ -47,7 +47,7 @@ namespace SpatialMapping
 			Windows::Foundation::Collections::IMapView<Platform::Guid,
 			Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^>^ const& surfaceCollection);
 
-		bool GetIsExportingMeshes() const { return m_isExportingMeshes; }
+		bool IsExportingMeshes() const { return m_isExportingMeshes; }
 		void SetIsExportingMeshes(bool const val) { m_isExportingMeshes = val; }
 
 	private:

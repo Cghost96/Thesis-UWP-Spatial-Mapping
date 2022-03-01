@@ -15,6 +15,8 @@
 #include "Common\Settings.h"
 #include "ShaderStructures.h"
 
+#include <vector>
+
 #include <ppltasks.h>
 #include <sstream>
 #include <memory>
@@ -23,12 +25,10 @@ namespace SpatialMapping
 {
 	struct SurfaceMeshProperties
 	{
-		Windows::Perception::Spatial::SpatialCoordinateSystem^ coordinateSystem = nullptr;
+		Windows::Perception::Spatial::SpatialCoordinateSystem^ localCoordSystem = nullptr;
 		Windows::Foundation::Numerics::float3 vertexPositionScale = Windows::Foundation::Numerics::float3::one();
 		unsigned int vertexStride = 0;
-		unsigned int posCount = 0;
 		unsigned int normalStride = 0;
-		unsigned int normalCount = 0;
 		unsigned int indexCount = 0;
 		DXGI_FORMAT  indexFormat = DXGI_FORMAT_UNKNOWN;
 	};
@@ -49,8 +49,7 @@ namespace SpatialMapping
 
 		void Draw(ID3D11Device* device, ID3D11DeviceContext* context, bool usingVprtShaders, bool isStereo);
 
-		void UpdateVertexResources(ID3D11Device* device,
-			Windows::Perception::Spatial::SpatialCoordinateSystem^ coordSystem = nullptr);
+		void UpdateVertexResources(ID3D11Device* device, Windows::Perception::Spatial::SpatialCoordinateSystem^ worldCoordSystem);
 		void CreateDeviceDependentResources(ID3D11Device* device);
 		void ReleaseVertexResources();
 		void ReleaseDeviceDependentResources();
@@ -62,10 +61,10 @@ namespace SpatialMapping
 		void SetIsActive(const bool& isActive) { m_isActive = isActive; }
 		void SetColorFadeTimer(const float& duration) { m_colorFadeTimeout = duration; m_colorFadeTimer = 0.f; }
 
-		std::shared_ptr<Windows::Storage::Streams::IBuffer^> GetPositionsIBuffer() const { return m_positionsIBuffer; }
-		std::shared_ptr<Windows::Storage::Streams::IBuffer^> GetNormalsIBuffer() const { return m_normalsIBuffer; }
+		const std::vector<Windows::Foundation::Numerics::float3>* GetExportPositions() const { return &m_exportPositions; }
 		std::shared_ptr<Windows::Storage::Streams::IBuffer^> GetIndexIBuffer() const { return m_indexIBuffer; }
 		const SurfaceMeshProperties* GetSurfaceMeshProperties() const { return &m_meshProperties; }
+		bool CanExport() const { return m_canExport; }
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexPositions() const { return m_vertexPositions; }
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexNormals() const { return m_vertexNormals; }
@@ -91,8 +90,7 @@ namespace SpatialMapping
 		Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ m_pendingSurfaceMesh = nullptr;
 		Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ m_surfaceMesh = nullptr;
 
-		std::shared_ptr<Windows::Storage::Streams::IBuffer^> m_positionsIBuffer = nullptr;
-		std::shared_ptr<Windows::Storage::Streams::IBuffer^> m_normalsIBuffer = nullptr;
+		std::vector<float3> m_exportPositions;
 		std::shared_ptr<Windows::Storage::Streams::IBuffer^> m_indexIBuffer = nullptr;
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexPositions;
@@ -119,5 +117,7 @@ namespace SpatialMapping
 		float  m_colorFadeTimeout = -1.f;
 
 		std::mutex m_meshResourcesMutex;
+
+		bool m_canExport = false;
 	};
 }

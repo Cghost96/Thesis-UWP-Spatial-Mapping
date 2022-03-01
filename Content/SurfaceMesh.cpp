@@ -24,14 +24,18 @@
 #include "SurfaceMesh.h"
 
 using namespace SpatialMapping;
+
+using namespace DX;
 using namespace DirectX;
 using namespace PackedVector;
 using namespace Windows::Perception::Spatial;
 using namespace Windows::Perception::Spatial::Surfaces;
+using namespace Windows::Foundation::Collections;
 using namespace Windows::Foundation::Numerics;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Graphics::DirectX;
 using namespace Windows::Storage;
+using namespace Platform;
 
 
 SurfaceMesh::SurfaceMesh()
@@ -103,7 +107,7 @@ void SurfaceMesh::UpdateTransform(
 		// matrices, because this class uses the surface mesh for rendering.
 		// Other applications could potentially involve using a SpatialCoordinateSystem from a stationary
 		// reference frame that is being used for physics simulation, etc.
-		auto tryTransform = m_meshProperties.coordinateSystem ? m_meshProperties.coordinateSystem->TryGetTransformTo(baseCoordinateSystem) : nullptr;
+		auto tryTransform = m_meshProperties.localCoordSystem ? m_meshProperties.localCoordSystem->TryGetTransformTo(baseCoordinateSystem) : nullptr;
 		if (tryTransform != nullptr)
 		{
 			// If the transform can be acquired, this spatial mesh is valid right now and
@@ -251,7 +255,7 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 }
 
 void SurfaceMesh::UpdateVertexResources(
-	ID3D11Device* device, SpatialCoordinateSystem^ coordSystem)
+	ID3D11Device* device, Windows::Perception::Spatial::SpatialCoordinateSystem^ worldCoordSystem = nullptr)
 {
 	SpatialSurfaceMesh^ surfaceMesh = std::move(m_pendingSurfaceMesh);
 	if (!surfaceMesh || surfaceMesh->TriangleIndices->ElementCount < 3)
@@ -261,7 +265,7 @@ void SurfaceMesh::UpdateVertexResources(
 	}
 
 	// Surface mesh resources are created off-thread, so that they don't affect rendering latency.
-	m_updateVertexResourcesTask.then([this, device, surfaceMesh, coordSystem]()
+	m_updateVertexResourcesTask.then([this, device, surfaceMesh, worldCoordSystem]()
 		{
 			// Create new Direct3D device resources for the updated buffers. These will be set aside
 			// for now, and then swapped into the active slot next time the render loop is ready to draw.
@@ -272,7 +276,7 @@ void SurfaceMesh::UpdateVertexResources(
 			IBuffer^ indices = surfaceMesh->TriangleIndices->Data;
 
 #ifdef PROCESS_MESH
-			CalculateRegression(surfaceMesh, positions, normals, indices, coordSystem);
+			CalculateRegression(surfaceMesh, positions, normals, indices, worldCoordSystem);
 #endif
 
 			// Then, we create Direct3D device buffers with the mesh data provided by HoloLens.
@@ -287,27 +291,40 @@ void SurfaceMesh::UpdateVertexResources(
 			// Before updating the meshes, check to ensure that there wasn't a more recent update.
 			{
 				std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
-
 				auto meshUpdateTime = surfaceMesh->SurfaceInfo->UpdateTime;
 				if (meshUpdateTime.UniversalTime > m_lastUpdateTime.UniversalTime)
 				{
+					m_canExport = false;
 					// Prepare to swap in the new meshes.
 					// Here, we use ComPtr.Swap() to avoid unnecessary overhead from ref counting.
 					m_updatedVertexPositions.Swap(updatedVertexPositions);
 					m_updatedVertexNormals.Swap(updatedVertexNormals);
 					m_updatedTriangleIndices.Swap(updatedTriangleIndices);
 
-					m_positionsIBuffer = std::make_shared<IBuffer^>(positions);
-					m_normalsIBuffer = std::make_shared<IBuffer^>(normals);
+					SpatialCoordinateSystem^ const meshLocalCoordSystem = surfaceMesh->CoordinateSystem;
+					IBox<float4x4>^ const meshCoordSysToWorld = meshLocalCoordSystem->TryGetTransformTo(worldCoordSystem);
+					XMSHORTN4* formattedPositions = GetDataFromIBuffer<XMSHORTN4>(positions);
+					float3 const posScale = surfaceMesh->VertexPositionScale;
+
+					m_exportPositions = {};
+					for (int i = 0; i < surfaceMesh->VertexPositions->ElementCount; i++)
+					{
+						XMFLOAT4 p;
+						XMVECTOR const vec = XMLoadShortN4(&formattedPositions[i]);
+						XMStoreFloat4(&p, vec);
+
+						float3 const ps = float3(p.x * posScale.x, p.y * posScale.y, p.z * posScale.z);
+						float3 const t = transform(float3(ps.x, ps.y, ps.z), meshCoordSysToWorld->Value);
+						m_exportPositions.push_back(t);
+					}
+
 					m_indexIBuffer = std::make_shared<IBuffer^>(indices);
 
 					// Cache properties
-					m_updatedMeshProperties.coordinateSystem = surfaceMesh->CoordinateSystem;
+					m_updatedMeshProperties.localCoordSystem = surfaceMesh->CoordinateSystem;
 					m_updatedMeshProperties.vertexPositionScale = surfaceMesh->VertexPositionScale;
 					m_updatedMeshProperties.vertexStride = surfaceMesh->VertexPositions->Stride;
-					m_updatedMeshProperties.posCount = surfaceMesh->VertexPositions->ElementCount;
 					m_updatedMeshProperties.normalStride = surfaceMesh->VertexNormals->Stride;
-					m_updatedMeshProperties.normalCount = surfaceMesh->VertexNormals->ElementCount;
 					m_updatedMeshProperties.indexCount = surfaceMesh->TriangleIndices->ElementCount;
 					m_updatedMeshProperties.indexFormat = static_cast<DXGI_FORMAT>(surfaceMesh->TriangleIndices->Format);
 
@@ -316,6 +333,7 @@ void SurfaceMesh::UpdateVertexResources(
 					m_lastUpdateTime = meshUpdateTime;
 					m_loadingComplete = true;
 				}
+				m_canExport = true;
 			}
 		});
 }

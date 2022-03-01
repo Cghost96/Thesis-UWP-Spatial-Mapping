@@ -148,7 +148,7 @@ void SpatialMappingMain::OnSurfacesChanged(
 	SpatialSurfaceObserver^ sender,
 	Object^ args)
 {
-	if (!m_meshRenderer->GetIsExportingMeshes()) {
+	if (!m_meshRenderer->IsExportingMeshes()) {
 		IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection = sender->GetObservedSurfaces();
 
 		// Process surface adds and updates.
@@ -275,7 +275,6 @@ HolographicFrame^ SpatialMappingMain::Update()
 			{
 				m_surfaceObserver->SetBoundingVolume(bounds);
 
-				// #TODO Add check for exporting mesh here as well?
 				// If the surface observer was successfully created, we can initialize our
 				// collection by pulling the current data set.
 				auto mapContainingSurfaceCollection = m_surfaceObserver->GetObservedSurfaces();
@@ -299,7 +298,7 @@ HolographicFrame^ SpatialMappingMain::Update()
 		m_surfaceObserver->SetBoundingVolume(bounds);
 	}
 
-	if (!m_meshRenderer->GetIsExportingMeshes()) {
+	if (!m_meshRenderer->IsExportingMeshes()) {
 		// Check for new input state since the last frame.
 		SpatialInteractionSourceState^ pointerState = m_spatialInputHandler->CheckForInput();
 		if (pointerState != nullptr)
@@ -308,7 +307,7 @@ HolographicFrame^ SpatialMappingMain::Update()
 				switch (pointerState->Source->Handedness)
 				{
 				case SpatialInteractionSourceHandedness::Left:
-					if (!m_meshRenderer->GetIsExportingMeshes()) {
+					if (!m_meshRenderer->IsExportingMeshes()) {
 						m_meshRenderer->SetIsExportingMeshes(true);
 						m_meshRenderer->ExportMeshes(currentCoordinateSystem);
 					}
@@ -400,10 +399,8 @@ bool SpatialMappingMain::Render(
 				// Only render world-locked content when positional tracking is active.
 				if (cameraActive)
 				{
-					if (!m_meshRenderer->GetIsExportingMeshes()) {
-						// Draw the sample hologram.
-						m_meshRenderer->Render(pCameraResources->IsRenderingStereoscopic(), m_drawWirfeFrame);
-					}
+					// Draw the sample hologram.
+					m_meshRenderer->Render(pCameraResources->IsRenderingStereoscopic(), m_drawWirfeFrame);
 
 					// On versions of the platform that support the CommitDirect3D11DepthBuffer API, we can 
 					// provide the depth buffer to the system, and it will use depth information to stabilize 
