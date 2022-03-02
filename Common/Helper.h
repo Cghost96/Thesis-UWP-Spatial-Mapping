@@ -37,13 +37,18 @@ namespace SpatialMapping {
 			OutputDebugStringA(os.str().c_str());
 		}
 
-		void inline ClearMeshFolder() {
+		inline std::string SetupMeshFolder() {
 			Platform::String^ folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
 			std::wstring folderW(folder->Begin());
 			std::string folderA(folderW.begin(), folderW.end());
 			if (std::filesystem::exists(folderA)) {
 				std::filesystem::remove_all(folderA);
 			}
+
+			ApplicationData::Current->LocalFolder->CreateFolderAsync("Meshes", CreationCollisionOption::FailIfExists);
+			std::string folderString = (std::string)folderA.c_str();
+
+			return folderString;
 		}
 	}
 }

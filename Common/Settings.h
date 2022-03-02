@@ -7,7 +7,7 @@ using namespace Windows::Foundation::Numerics;
 //#undef PROCESS_MESH
 
 #define HIGHLIGHT_NEW_MESHES
-#undef HIGHLIGHT_NEW_MESHES
+//#undef HIGHLIGHT_NEW_MESHES
 
 #define EXPORT_ASYNC
 #undef EXPORT_ASYNC
@@ -29,13 +29,13 @@ using namespace Windows::Foundation::Numerics;
 // #TODO Move mesh processing into separate file
 // #TODO Remote computing
 // #TODO Use scene understanding to extract measurements of objects? (in order to get some practical functionality of the device)
-// #TODO Implement coloring-options of surfaces
+// #TODO Implement coloring of individual surfaces
 
 namespace Options {
 	bool const DRAW_WIREFRAME_START_VALUE = true;
 	double const MAX_TRIANGLES_PER_CUBIC_METER = 200;
 	float const MAX_INACTIVE_MESH_TIME = 60.0f * 5.0f;
-	float const MESH_FADE_IN_TIME = 2.0f;
+	float const MESH_FADE_IN_TIME = 1.5f;
 	bool const INCLUDE_VERTEX_NORMALS = true;
 
 
@@ -45,7 +45,7 @@ namespace Options {
 #ifdef USE_BOUNDING_BOX
 	SpatialBoundingBox const BOUNDING_BOX = {
 			{0.f, 0.f, 0.f}, // At device-position
-			{1.f, 1.f, 2.f}
+			{2.f, 2.f, 2.f}
 	};
 #endif
 

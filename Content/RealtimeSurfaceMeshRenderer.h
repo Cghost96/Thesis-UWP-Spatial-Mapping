@@ -49,6 +49,7 @@ namespace SpatialMapping
 
 		bool IsExportingMeshes() const { return m_isExportingMeshes; }
 		void SetIsExportingMeshes(bool const val) { m_isExportingMeshes = val; }
+		const std::map<Platform::Guid, SpatialMapping::SurfaceMesh>* MeshCollection() const { return &m_meshCollection; }
 
 	private:
 		Concurrency::task<void> AddOrUpdateSurfaceAsync(Platform::Guid id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
@@ -64,7 +65,6 @@ namespace SpatialMapping
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>       m_lightingPixelShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>       m_colorPixelShader;
 
-		// #TODO Implement as unordered_map?
 		std::map<Platform::Guid, SurfaceMesh> m_meshCollection;
 
 		// A way to lock map access.

@@ -41,6 +41,14 @@ SpatialMappingMain::SpatialMappingMain(
 	m_deviceResources->RegisterDeviceNotify(this);
 }
 
+SpatialMappingMain::~SpatialMappingMain()
+{
+	// Deregister device notification.
+	m_deviceResources->RegisterDeviceNotify(nullptr);
+
+	UnregisterHolographicEventHandlers();
+}
+
 void SpatialMappingMain::SetHolographicSpace(
 	HolographicSpace^ holographicSpace)
 {
@@ -134,14 +142,6 @@ void SpatialMappingMain::UnregisterHolographicEventHandlers()
 	{
 		m_surfaceObserver->ObservedSurfacesChanged -= m_surfacesChangedToken;
 	}
-}
-
-SpatialMappingMain::~SpatialMappingMain()
-{
-	// Deregister device notification.
-	m_deviceResources->RegisterDeviceNotify(nullptr);
-
-	UnregisterHolographicEventHandlers();
 }
 
 void SpatialMappingMain::OnSurfacesChanged(
@@ -307,26 +307,26 @@ HolographicFrame^ SpatialMappingMain::Update()
 				switch (pointerState->Source->Handedness)
 				{
 				case SpatialInteractionSourceHandedness::Left:
-					if (!m_meshRenderer->IsExportingMeshes()) {
-						m_meshRenderer->SetIsExportingMeshes(true);
-						m_meshRenderer->ExportMeshes(currentCoordinateSystem);
-					}
+					//if (!m_meshRenderer->IsExportingMeshes()) {
+						//m_meshRenderer->SetIsExportingMeshes(true);
+						//m_meshRenderer->ExportMeshes(currentCoordinateSystem);
+					//}
 					break;
 				case SpatialInteractionSourceHandedness::Right:
-
+					m_drawWirfeFrame = !m_drawWirfeFrame;
 					break;
 				default:
 					break;
 				}
 			}
-			else if (pointerState->IsSelectPressed) {
+			if (pointerState->IsSelectPressed) {
 				switch (pointerState->Source->Handedness)
 				{
 				case SpatialInteractionSourceHandedness::Left:
 
 					break;
 				case SpatialInteractionSourceHandedness::Right:
-					m_drawWirfeFrame = !m_drawWirfeFrame;
+
 					break;
 				default:
 					break;
@@ -435,7 +435,12 @@ bool SpatialMappingMain::Render(
 
 void SpatialMappingMain::SaveAppState()
 {
-	// This sample does not persist any state between sessions.
+	auto const meshCollection = m_meshRenderer->MeshCollection();
+	for (auto& const pair : *meshCollection) {
+		while (!pair.second.canExport) {
+			// Wait until all meshes have finished exporting
+		}
+	}
 }
 
 void SpatialMappingMain::LoadAppState()

@@ -16,6 +16,7 @@
 #include <DirectXCollision.h>
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
+#include <fstream>
 
 #include "Common\DirectXHelper.h"
 #include "Common\StepTimer.h"
@@ -275,9 +276,80 @@ void SurfaceMesh::UpdateVertexResources(
 			IBuffer^ normals = surfaceMesh->VertexNormals->Data;
 			IBuffer^ indices = surfaceMesh->TriangleIndices->Data;
 
-#ifdef PROCESS_MESH
-			CalculateRegression(surfaceMesh, positions, normals, indices, worldCoordSystem);
-#endif
+			if (canExport && worldCoordSystem != nullptr) {
+				FinishedExporting(false);
+
+				SpatialCoordinateSystem^ const meshLocalCoordSystem = surfaceMesh->CoordinateSystem;
+				IBox<float4x4>^ const meshCoordSysToWorld = meshLocalCoordSystem->TryGetTransformTo(worldCoordSystem);
+				IBox<float4x4>^ const worldCoordSysToMesh = worldCoordSystem->TryGetTransformTo(meshLocalCoordSystem);
+
+				if (meshCoordSysToWorld && worldCoordSysToMesh) {
+					XMSHORTN4* const formattedPositions = GetDataFromIBuffer<XMSHORTN4>(positions);
+#ifdef USE_32BIT_INDICES
+					using IndexFormat = uint32_t;
+#else
+					using IndexFormat = uint16_t;
+#endif // USE_32BIT_INDICES
+					IndexFormat* const formattedIndices = GetDataFromIBuffer<IndexFormat>(indices);
+
+					if (formattedPositions != nullptr && formattedIndices != nullptr) {
+						std::lock_guard<std::mutex> guard(m_exportMutex);
+
+						char file[256];
+						int const meshHash = surfaceMesh->GetHashCode();
+						std::snprintf(file, 256, "%s\\mesh_%d.obj", meshFolderPath, meshHash);
+						std::ofstream fileOut(file, std::ios::trunc | std::ios::out);
+						fileOut << "\no mesh_" << meshHash << "\n\n";
+
+						float3 const posScale = surfaceMesh->VertexPositionScale;
+
+						for (int i = 0; i < surfaceMesh->VertexPositions->ElementCount; i++)
+						{
+							// Extract from device
+							XMFLOAT4 p;
+							XMVECTOR const vec = XMLoadShortN4(&formattedPositions[i]);
+							XMStoreFloat4(&p, vec);
+
+							float3 const pScaled = float3(p.x * posScale.x, p.y * posScale.y, p.z * posScale.z);
+							float3 pMeshToWorldTrans = transform(float3(pScaled.x, pScaled.y, pScaled.z), meshCoordSysToWorld->Value);
+
+							// Process
+//#ifdef PROCESS_MESH
+//#endif
+							//pMeshToWorldTrans.x *= 1.5f;
+							//pMeshToWorldTrans.y *= .5f;
+
+
+							// Export to file
+							fileOut << "v " << pMeshToWorldTrans.x << " " << pMeshToWorldTrans.y << " " << pMeshToWorldTrans.z << "\n";
+
+							// Insert back into device
+							float3 const pWorldToMeshTrans = transform(pMeshToWorldTrans, worldCoordSysToMesh->Value);
+							p = { pWorldToMeshTrans.x / posScale.x, pWorldToMeshTrans.y / posScale.y, pWorldToMeshTrans.z / posScale.z, p.w };
+
+							XMSHORTN4 pUpdated;
+							XMVECTOR const vecUpdated = XMLoadFloat4(&p);
+							XMStoreShortN4(&pUpdated, vecUpdated);
+
+							formattedPositions[i] = pUpdated;
+						}
+
+						fileOut << "\n";
+
+						// Export to file
+						for (int i = 0; i < surfaceMesh->TriangleIndices->ElementCount; i += 3)
+						{
+							// +1 to get .obj format
+							IndexFormat const iOne = formattedIndices[i] + 1;
+							IndexFormat const iTwo = formattedIndices[i + 1] + 1;
+							IndexFormat const iThree = formattedIndices[i + 2] + 1;
+							fileOut << "f " << iOne << " " << iTwo << " " << iThree << "\n";
+						}
+						fileOut.close();
+					}
+				}
+				FinishedExporting(true);
+			}
 
 			// Then, we create Direct3D device buffers with the mesh data provided by HoloLens.
 			Microsoft::WRL::ComPtr<ID3D11Buffer> updatedVertexPositions;
@@ -294,31 +366,11 @@ void SurfaceMesh::UpdateVertexResources(
 				auto meshUpdateTime = surfaceMesh->SurfaceInfo->UpdateTime;
 				if (meshUpdateTime.UniversalTime > m_lastUpdateTime.UniversalTime)
 				{
-					m_canExport = false;
 					// Prepare to swap in the new meshes.
 					// Here, we use ComPtr.Swap() to avoid unnecessary overhead from ref counting.
 					m_updatedVertexPositions.Swap(updatedVertexPositions);
 					m_updatedVertexNormals.Swap(updatedVertexNormals);
 					m_updatedTriangleIndices.Swap(updatedTriangleIndices);
-
-					SpatialCoordinateSystem^ const meshLocalCoordSystem = surfaceMesh->CoordinateSystem;
-					IBox<float4x4>^ const meshCoordSysToWorld = meshLocalCoordSystem->TryGetTransformTo(worldCoordSystem);
-					XMSHORTN4* formattedPositions = GetDataFromIBuffer<XMSHORTN4>(positions);
-					float3 const posScale = surfaceMesh->VertexPositionScale;
-
-					m_exportPositions = {};
-					for (int i = 0; i < surfaceMesh->VertexPositions->ElementCount; i++)
-					{
-						XMFLOAT4 p;
-						XMVECTOR const vec = XMLoadShortN4(&formattedPositions[i]);
-						XMStoreFloat4(&p, vec);
-
-						float3 const ps = float3(p.x * posScale.x, p.y * posScale.y, p.z * posScale.z);
-						float3 const t = transform(float3(ps.x, ps.y, ps.z), meshCoordSysToWorld->Value);
-						m_exportPositions.push_back(t);
-					}
-
-					m_indexIBuffer = std::make_shared<IBuffer^>(indices);
 
 					// Cache properties
 					m_updatedMeshProperties.localCoordSystem = surfaceMesh->CoordinateSystem;
@@ -333,7 +385,6 @@ void SurfaceMesh::UpdateVertexResources(
 					m_lastUpdateTime = meshUpdateTime;
 					m_loadingComplete = true;
 				}
-				m_canExport = true;
 			}
 		});
 }

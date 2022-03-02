@@ -12,6 +12,7 @@
 #include "pch.h"
 #include "AppView.h"
 #include "Common/Helper.h"
+#include "Content/SurfaceMesh.h"
 
 #include <filesystem>
 
@@ -66,6 +67,9 @@ void AppView::Initialize(CoreApplicationView^ applicationView)
 	// resources.
 	m_deviceResources = std::make_shared<DX::DeviceResources>();
 
+	// Set static variable
+	SurfaceMesh::meshFolderPath = Helper::SetupMeshFolder();
+
 	m_main = std::make_unique<SpatialMappingMain>(m_deviceResources);
 }
 
@@ -109,8 +113,6 @@ void AppView::Load(Platform::String^ entryPoint)
 // update, draw, and present loop, and it also oversees window message processing.
 void AppView::Run()
 {
-	Helper::ClearMeshFolder();
-
 	while (!m_windowClosed)
 	{
 		if (m_windowVisible && (m_holographicSpace != nullptr))
@@ -160,6 +162,7 @@ void AppView::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
 
 	create_task([this, deferral]()
 		{
+			SurfaceMesh::canExport = false;
 			m_deviceResources->Trim();
 
 			if (m_main != nullptr)
