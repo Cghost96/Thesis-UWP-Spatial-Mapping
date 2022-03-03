@@ -40,7 +40,8 @@ namespace SpatialMapping
 		~SurfaceMesh();
 
 		inline static std::string meshFolderPath;
-		inline static bool canExport = true;
+		inline static bool canUpdate = true;
+		inline static SpatialCoordinateSystem^ fixedCoordSystem = nullptr;
 
 		void UpdateSurface(Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ surface);
 		void UpdateTransform(
@@ -64,14 +65,20 @@ namespace SpatialMapping
 		void SetIsActive(const bool& isActive) { m_isActive = isActive; }
 		void SetColorFadeTimer(const float& duration) { m_colorFadeTimeout = duration; m_colorFadeTimer = 0.f; }
 
+#ifdef USE_32BIT_INDICES
+		using IndexFormat = uint32_t;
+#else
+		using IndexFormat = uint16_t;
+#endif // USE_32BIT_INDICES
+
 		const std::vector<Windows::Foundation::Numerics::float3>* GetExportPositions() const { return &m_exportPositions; }
+		const std::vector<IndexFormat>* GetExportIndices() const { return &m_exportIndices; }
+		int GetID() const { return m_id; }
 		const SurfaceMeshProperties* GetSurfaceMeshProperties() const { return &m_meshProperties; }
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexPositions() const { return m_vertexPositions; }
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexNormals() const { return m_vertexNormals; }
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetTriangleIndices() const { return m_triangleIndices; }
-		bool FinishedExporting() const { return m_finishedExporting; }
-		void FinishedExporting(bool val) { m_finishedExporting = val; }
 
 	private:
 		void SwapVertexBuffers();
@@ -94,11 +101,8 @@ namespace SpatialMapping
 		Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ m_surfaceMesh = nullptr;
 
 		std::vector<float3> m_exportPositions;
-#ifdef USE_32BIT_INDICES
-		std::vector<uint32_t> m_exportIndices;
-#else
-		std::vector<uint16_t> m_exportIndices;
-#endif
+		std::vector<IndexFormat> m_exportIndices;
+		int m_id = 0;
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexPositions;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexNormals;
@@ -124,8 +128,5 @@ namespace SpatialMapping
 		float  m_colorFadeTimeout = -1.f;
 
 		std::mutex m_meshResourcesMutex;
-
-		bool m_finishedExporting = true;
-		std::mutex m_exportMutex;
 	};
 }

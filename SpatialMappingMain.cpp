@@ -12,12 +12,15 @@
 #include "pch.h"
 #include "SpatialMappingMain.h"
 #include "Common\DirectXHelper.h"
+#include "Common\Helper.h"
 
 #include <windows.graphics.directx.direct3d11.interop.h>
 #include <Collection.h>
 
-using namespace SpatialMapping;
+#include <string>
+#include <fstream>
 
+using namespace SpatialMapping;
 using namespace concurrency;
 using namespace Microsoft::WRL;
 using namespace Platform;
@@ -30,6 +33,8 @@ using namespace Windows::Graphics::Holographic;
 using namespace Windows::Perception::Spatial;
 using namespace Windows::Perception::Spatial::Surfaces;
 using namespace Windows::UI::Input::Spatial;
+using namespace Windows::Storage;
+
 using namespace std::placeholders;
 
 // Loads and initializes application assets when the application is loaded.
@@ -148,37 +153,35 @@ void SpatialMappingMain::OnSurfacesChanged(
 	SpatialSurfaceObserver^ sender,
 	Object^ args)
 {
-	if (!m_meshRenderer->IsExportingMeshes()) {
-		IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection = sender->GetObservedSurfaces();
+	IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection = sender->GetObservedSurfaces();
 
-		// Process surface adds and updates.
-		for (const auto& pair : surfaceCollection)
+	// Process surface adds and updates.
+	for (const auto& pair : surfaceCollection)
+	{
+		auto id = pair->Key;
+		auto surfaceInfo = pair->Value;
+
+		if (m_meshRenderer->HasSurface(id))
 		{
-			auto id = pair->Key;
-			auto surfaceInfo = pair->Value;
-
-			if (m_meshRenderer->HasSurface(id))
+			if (m_meshRenderer->GetLastUpdateTime(id).UniversalTime < surfaceInfo->UpdateTime.UniversalTime)
 			{
-				if (m_meshRenderer->GetLastUpdateTime(id).UniversalTime < surfaceInfo->UpdateTime.UniversalTime)
-				{
-					// Update existing surface.
-					m_meshRenderer->UpdateSurface(id, surfaceInfo);
-				}
-			}
-			else
-			{
-				// New surface.
-				m_meshRenderer->AddSurface(id, surfaceInfo);
+				// Update existing surface.
+				m_meshRenderer->UpdateSurface(id, surfaceInfo);
 			}
 		}
-
-		// Sometimes, a mesh will fall outside the area that is currently visible to
-		// the surface observer. In this code sample, we "sleep" any meshes that are
-		// not included in the surface collection to avoid rendering them.
-		// The system can including them in the collection again later, in which case
-		// they will no longer be hidden.
-		m_meshRenderer->HideInactiveMeshes(surfaceCollection);
+		else
+		{
+			// New surface.
+			m_meshRenderer->AddSurface(id, surfaceInfo);
+		}
 	}
+
+	// Sometimes, a mesh will fall outside the area that is currently visible to
+	// the surface observer. In this code sample, we "sleep" any meshes that are
+	// not included in the surface collection to avoid rendering them.
+	// The system can including them in the collection again later, in which case
+	// they will no longer be hidden.
+	m_meshRenderer->HideInactiveMeshes(surfaceCollection);
 }
 
 // Updates the application state once per frame.
@@ -205,6 +208,9 @@ HolographicFrame^ SpatialMappingMain::Update()
 	// associated with the current frame. Later, this coordinate system is used for
 	// for creating the stereo view matrices when rendering the sample content.
 	SpatialCoordinateSystem^ currentCoordinateSystem = m_referenceFrame->GetStationaryCoordinateSystemAtTimestamp(prediction->Timestamp);
+	if (SurfaceMesh::fixedCoordSystem == nullptr) {
+		SurfaceMesh::fixedCoordSystem = currentCoordinateSystem;
+	}
 
 	// Only create a surface observer when you need to - do not create a new one each frame.
 	if (m_surfaceObserver == nullptr) {
@@ -298,39 +304,37 @@ HolographicFrame^ SpatialMappingMain::Update()
 		m_surfaceObserver->SetBoundingVolume(bounds);
 	}
 
-	if (!m_meshRenderer->IsExportingMeshes()) {
-		// Check for new input state since the last frame.
-		SpatialInteractionSourceState^ pointerState = m_spatialInputHandler->CheckForInput();
-		if (pointerState != nullptr)
-		{
-			if (pointerState->IsGrasped) {
-				switch (pointerState->Source->Handedness)
-				{
-				case SpatialInteractionSourceHandedness::Left:
-					//if (!m_meshRenderer->IsExportingMeshes()) {
-						//m_meshRenderer->SetIsExportingMeshes(true);
-						//m_meshRenderer->ExportMeshes(currentCoordinateSystem);
-					//}
-					break;
-				case SpatialInteractionSourceHandedness::Right:
-					m_drawWirfeFrame = !m_drawWirfeFrame;
-					break;
-				default:
-					break;
-				}
+	// Check for new input state since the last frame.
+	SpatialInteractionSourceState^ pointerState = m_spatialInputHandler->CheckForInput();
+	if (pointerState != nullptr)
+	{
+		if (pointerState->IsGrasped) {
+			switch (pointerState->Source->Handedness)
+			{
+			case SpatialInteractionSourceHandedness::Left:
+				//if (!m_meshRenderer->IsExportingMeshes()) {
+					//m_meshRenderer->SetIsExportingMeshes(true);
+					//m_meshRenderer->ExportMeshes(currentCoordinateSystem);
+				//}
+				break;
+			case SpatialInteractionSourceHandedness::Right:
+				//m_drawWirfeFrame = !m_drawWirfeFrame;
+				break;
+			default:
+				break;
 			}
-			if (pointerState->IsSelectPressed) {
-				switch (pointerState->Source->Handedness)
-				{
-				case SpatialInteractionSourceHandedness::Left:
+		}
+		if (pointerState->IsSelectPressed) {
+			switch (pointerState->Source->Handedness)
+			{
+			case SpatialInteractionSourceHandedness::Left:
 
-					break;
-				case SpatialInteractionSourceHandedness::Right:
+				break;
+			case SpatialInteractionSourceHandedness::Right:
 
-					break;
-				default:
-					break;
-				}
+				break;
+			default:
+				break;
 			}
 		}
 	}
@@ -435,12 +439,44 @@ bool SpatialMappingMain::Render(
 
 void SpatialMappingMain::SaveAppState()
 {
-	auto const meshCollection = m_meshRenderer->MeshCollection();
-	for (auto& const pair : *meshCollection) {
-		while (!pair.second.canExport) {
-			// Wait until all meshes have finished exporting
+	String^ folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
+	std::wstring folderW(folder->Begin());
+	std::string folderA(folderW.begin(), folderW.end());
+	const char* charStr = folderA.c_str();
+	char file[512];
+	std::snprintf(file, 512, "%s\\meshes.obj", charStr);
+	std::ofstream fileOut(file, std::ios::out);
+
+	std::lock_guard<std::mutex> guard(m_exportMutex);
+
+	auto const meshMap = m_meshRenderer->MeshCollection();
+	for (auto const& pair : *meshMap) {
+		auto const& mesh = pair.second;
+
+		auto const positions = mesh.GetExportPositions();
+		auto const indices = mesh.GetExportIndices();
+		auto const id = mesh.GetID();
+
+		if ((*positions).size() > 0 && (*indices).size() > 0) {
+
+			fileOut << "o mesh_" << id << "\n";
+
+			for (auto const p : *positions) {
+				fileOut << "v " << p.x << " " << p.y << " " << p.z << "\n";
+			}
+
+			fileOut << "\n";
+
+			for (int i = 0; i < (*indices).size(); i++) {
+				fileOut << "f " << (*indices)[i] << " " << (*indices)[++i] << " " << (*indices)[++i] << "\n";
+			}
+
+			fileOut << "\n";
+
 		}
 	}
+
+	fileOut.close();
 }
 
 void SpatialMappingMain::LoadAppState()

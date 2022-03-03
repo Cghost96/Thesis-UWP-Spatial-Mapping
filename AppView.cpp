@@ -154,6 +154,8 @@ void AppView::OnViewActivated(CoreApplicationView^ sender, IActivatedEventArgs^ 
 
 void AppView::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
 {
+	SurfaceMesh::canUpdate = false;
+
 	// Save app state asynchronously after requesting a deferral. Holding a deferral
 	// indicates that the application is busy performing suspending operations. Be
 	// aware that a deferral may not be held indefinitely; after about five seconds,
@@ -162,7 +164,6 @@ void AppView::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
 
 	create_task([this, deferral]()
 		{
-			SurfaceMesh::canExport = false;
 			m_deviceResources->Trim();
 
 			if (m_main != nullptr)

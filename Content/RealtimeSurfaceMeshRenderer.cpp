@@ -11,9 +11,6 @@
 
 #include "pch.h"
 
-#include <string>
-#include <fstream>
-
 #include <DirectXPackedVector.h>
 
 #include "Common\DirectXHelper.h"
@@ -22,7 +19,6 @@
 #include "Common/Helper.h"
 
 using namespace SpatialMapping;
-
 using namespace Concurrency;
 using namespace DX;
 using namespace DirectX;
@@ -31,7 +27,6 @@ using namespace Windows::Foundation::Collections;
 using namespace Windows::Foundation::Numerics;
 using namespace Windows::Perception::Spatial;
 using namespace Windows::Perception::Spatial::Surfaces;
-using namespace Windows::Storage;
 using namespace Platform;
 
 RealtimeSurfaceMeshRenderer::RealtimeSurfaceMeshRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources) :
@@ -395,8 +390,8 @@ Windows::Foundation::DateTime RealtimeSurfaceMeshRenderer::GetLastUpdateTime(Pla
 	}
 }
 
-void RealtimeSurfaceMeshRenderer::ExportMeshes(SpatialCoordinateSystem^& const worldCoordinateSystem)
-{
+//void RealtimeSurfaceMeshRenderer::ExportMeshes(SpatialCoordinateSystem^& const worldCoordinateSystem)
+//{
 //#ifdef EXPORT_ASYNC
 //	m_exportMeshesTask.then([this, worldCoordinateSystem]()
 //		{
@@ -471,4 +466,4 @@ void RealtimeSurfaceMeshRenderer::ExportMeshes(SpatialCoordinateSystem^& const w
 //#ifdef EXPORT_ASYNC
 //		});
 //#endif
-}
+//}

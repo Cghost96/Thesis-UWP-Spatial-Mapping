@@ -39,7 +39,7 @@ namespace SpatialMapping
 		void UpdateSurface(Platform::Guid id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
 		void RemoveSurface(Platform::Guid id);
 		void ClearSurfaces();
-		void ExportMeshes(Windows::Perception::Spatial::SpatialCoordinateSystem^& const worldCoordinateSystem);
+		//void ExportMeshes(Windows::Perception::Spatial::SpatialCoordinateSystem^& const worldCoordinateSystem);
 
 		Windows::Foundation::DateTime GetLastUpdateTime(Platform::Guid id);
 
@@ -47,8 +47,6 @@ namespace SpatialMapping
 			Windows::Foundation::Collections::IMapView<Platform::Guid,
 			Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^>^ const& surfaceCollection);
 
-		bool IsExportingMeshes() const { return m_isExportingMeshes; }
-		void SetIsExportingMeshes(bool const val) { m_isExportingMeshes = val; }
 		const std::map<Platform::Guid, SpatialMapping::SurfaceMesh>* MeshCollection() const { return &m_meshCollection; }
 
 	private:
@@ -91,7 +89,6 @@ namespace SpatialMapping
 		const float c_surfaceMeshFadeInTime = Options::MESH_FADE_IN_TIME;
 
 		bool m_loadingComplete;
-		bool m_isExportingMeshes = false;
 	};
 };
 
