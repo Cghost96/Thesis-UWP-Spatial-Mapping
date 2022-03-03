@@ -302,23 +302,26 @@ void SurfaceMesh::UpdateVertexResources(
 
 								// Scale and transform
 								float3 const pScaled = float3(p.x * posScale.x, p.y * posScale.y, p.z * posScale.z);
-								float3 pMeshToWorldTrans = transform(float3(pScaled.x, pScaled.y, pScaled.z), meshCoordSysToWorld->Value);
-								float3 pMeshToFixedTrans = transform(float3(pScaled.x, pScaled.y, pScaled.z), meshCoordSysToFixed->Value);
+								//float3 pMeshToWorldTrans = transform(float3(pScaled.x, pScaled.y, pScaled.z), meshCoordSysToWorld->Value);
+								//float3 pMeshToFixedTrans = transform(float3(pScaled.x, pScaled.y, pScaled.z), meshCoordSysToFixed->Value);
 
 								// Process
 	//#ifdef PROCESS_MESH
 	//#endif
 								//pMeshToWorldTrans.x *= 1.5f;
 								//pMeshToFixedTrans.x *= 1.5f;
+								//pScaled.x *= 1.5f;
 								//pMeshToWorldTrans.y *= .5f;
 								//pMeshToFixedTrans.y *= .5f;
+								//pScaled.y *= .5f;
 
 								// Cache for export
-								m_exportPositions.push_back(pMeshToFixedTrans);
+								m_exportPositions.push_back(pScaled);
 
 								// Insert back into app
-								float3 const pWorldToMeshTrans = transform(pMeshToWorldTrans, worldCoordSysToMesh->Value);
-								p = { pWorldToMeshTrans.x / posScale.x, pWorldToMeshTrans.y / posScale.y, pWorldToMeshTrans.z / posScale.z, p.w };
+								//float3 const pWorldToMeshTrans = transform(pMeshToWorldTrans, worldCoordSysToMesh->Value);
+								//p = { pWorldToMeshTrans.x / posScale.x, pWorldToMeshTrans.y / posScale.y, pWorldToMeshTrans.z / posScale.z, p.w };
+								p = { pScaled.x / posScale.x, pScaled.y / posScale.y, pScaled.z / posScale.z, p.w };
 
 								XMSHORTN4 pUpdated;
 								XMVECTOR const vecUpdated = XMLoadFloat4(&p);
