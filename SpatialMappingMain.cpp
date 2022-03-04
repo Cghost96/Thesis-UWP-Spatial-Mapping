@@ -312,31 +312,28 @@ HolographicFrame^ SpatialMappingMain::Update()
 			switch (pointerState->Source->Handedness)
 			{
 			case SpatialInteractionSourceHandedness::Left:
-				//if (!m_meshRenderer->IsExportingMeshes()) {
-					//m_meshRenderer->SetIsExportingMeshes(true);
-					//m_meshRenderer->ExportMeshes(currentCoordinateSystem);
-				//}
+
 				break;
 			case SpatialInteractionSourceHandedness::Right:
-				//m_drawWirfeFrame = !m_drawWirfeFrame;
+				m_drawWirfeFrame = !m_drawWirfeFrame;
 				break;
 			default:
 				break;
 			}
 		}
-		if (pointerState->IsSelectPressed) {
-			switch (pointerState->Source->Handedness)
-			{
-			case SpatialInteractionSourceHandedness::Left:
+		//if (pointerState->IsSelectPressed) {
+		//	switch (pointerState->Source->Handedness)
+		//	{
+		//	case SpatialInteractionSourceHandedness::Left:
 
-				break;
-			case SpatialInteractionSourceHandedness::Right:
+		//		break;
+		//	case SpatialInteractionSourceHandedness::Right:
 
-				break;
-			default:
-				break;
-			}
-		}
+		//		break;
+		//	default:
+		//		break;
+		//	}
+		//}
 	}
 
 	m_timer.Tick([&]()
@@ -439,6 +436,7 @@ bool SpatialMappingMain::Render(
 
 void SpatialMappingMain::SaveAppState()
 {
+#ifdef EXPORT_MESH
 	String^ folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
 	std::wstring folderW(folder->Begin());
 	std::string folderA(folderW.begin(), folderW.end());
@@ -447,10 +445,10 @@ void SpatialMappingMain::SaveAppState()
 	std::snprintf(file, 512, "%s\\meshes.obj", charStr);
 	std::ofstream fileOut(file, std::ios::out);
 
-	std::lock_guard<std::mutex> guard(m_exportMutex);
-
 	auto const meshMap = m_meshRenderer->MeshCollection();
 	for (auto const& pair : *meshMap) {
+
+		std::lock_guard<std::mutex> guard(m_exportMutex);
 		auto const& mesh = pair.second;
 
 		auto const positions = mesh.GetExportPositions();
@@ -472,11 +470,11 @@ void SpatialMappingMain::SaveAppState()
 			}
 
 			fileOut << "\n";
-
 		}
 	}
 
 	fileOut.close();
+#endif
 }
 
 void SpatialMappingMain::LoadAppState()

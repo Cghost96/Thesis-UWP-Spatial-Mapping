@@ -275,6 +275,8 @@ void SurfaceMesh::UpdateVertexResources(
 				IBuffer^ normals = surfaceMesh->VertexNormals->Data;
 				IBuffer^ indices = surfaceMesh->TriangleIndices->Data;
 
+				surfaceMesh->ToString();
+
 				if (fixedCoordSystem != nullptr && worldCoordSystem != nullptr) {
 					SpatialCoordinateSystem^ const meshCoordSys = surfaceMesh->CoordinateSystem;
 					IBox<float4x4>^ const meshCoordSysToFixed = meshCoordSys->TryGetTransformTo(fixedCoordSystem);
@@ -286,10 +288,11 @@ void SurfaceMesh::UpdateVertexResources(
 						IndexFormat* const indexData = GetDataFromIBuffer<IndexFormat>(indices);
 
 						if (positionData != nullptr && indexData != nullptr) {
+#ifdef EXPORT_MESH
 							m_id = surfaceMesh->GetHashCode();
-
-							float3 const posScale = surfaceMesh->VertexPositionScale;
 							m_exportPositions.clear();
+#endif
+							float3 const posScale = surfaceMesh->VertexPositionScale;
 
 							std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
 
@@ -300,23 +303,26 @@ void SurfaceMesh::UpdateVertexResources(
 								XMVECTOR const vec = XMLoadShortN4(&positionData[i]);
 								XMStoreFloat4(&p, vec);
 
-								// Scale and transform
+								// Scale/transform
 								float3 const pScaled = float3(p.x * posScale.x, p.y * posScale.y, p.z * posScale.z);
 								//float3 pMeshToWorldTrans = transform(float3(pScaled.x, pScaled.y, pScaled.z), meshCoordSysToWorld->Value);
 								//float3 pMeshToFixedTrans = transform(float3(pScaled.x, pScaled.y, pScaled.z), meshCoordSysToFixed->Value);
 
 								// Process
-	//#ifdef PROCESS_MESH
-	//#endif
+#ifdef PROCESS_MESH
 								//pMeshToWorldTrans.x *= 1.5f;
 								//pMeshToFixedTrans.x *= 1.5f;
 								//pScaled.x *= 1.5f;
 								//pMeshToWorldTrans.y *= .5f;
 								//pMeshToFixedTrans.y *= .5f;
 								//pScaled.y *= .5f;
+#endif
 
+
+#ifdef EXPORT_MESH
 								// Cache for export
 								m_exportPositions.push_back(pScaled);
+#endif
 
 								// Insert back into app
 								//float3 const pWorldToMeshTrans = transform(pMeshToWorldTrans, worldCoordSysToMesh->Value);
@@ -330,6 +336,7 @@ void SurfaceMesh::UpdateVertexResources(
 								positionData[i] = pUpdated;
 							}
 
+#ifdef EXPORT_MESH
 							m_exportIndices.clear();
 
 							// Cache for export
@@ -338,6 +345,7 @@ void SurfaceMesh::UpdateVertexResources(
 								// +1 to get .obj format
 								m_exportIndices.push_back(indexData[i] + 1);
 							}
+#endif
 						}
 					}
 				}

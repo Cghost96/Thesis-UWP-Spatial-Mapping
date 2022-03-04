@@ -4,13 +4,13 @@ using namespace Windows::Perception::Spatial;
 using namespace Windows::Foundation::Numerics;
 
 #define PROCESS_MESH
-//#undef PROCESS_MESH
+#undef PROCESS_MESH
 
 #define HIGHLIGHT_NEW_MESHES
 //#undef HIGHLIGHT_NEW_MESHES
 
-#define EXPORT_ASYNC
-#undef EXPORT_ASYNC
+#define EXPORT_MESH
+#undef EXPORT_MESH
 
 #define EXPORT_NORMALS
 #undef EXPORT_NORMALS
@@ -25,11 +25,6 @@ using namespace Windows::Foundation::Numerics;
 
 #define USE_BOUNDING_FRUSTUM
 #undef USE_BOUNDING_FRUSTUM
-
-// #TODO Move mesh processing into separate file
-// #TODO Remote computing
-// #TODO Use scene understanding to extract measurements of objects? (in order to get some practical functionality of the device)
-// #TODO Implement coloring of individual surfaces
 
 namespace Options {
 	bool const DRAW_WIREFRAME_START_VALUE = true;
