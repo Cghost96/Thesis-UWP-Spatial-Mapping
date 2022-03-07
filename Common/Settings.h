@@ -10,7 +10,7 @@ using namespace Windows::Foundation::Numerics;
 //#undef HIGHLIGHT_NEW_MESHES
 
 #define EXPORT_MESH
-#undef EXPORT_MESH
+//#undef EXPORT_MESH
 
 #define EXPORT_NORMALS
 #undef EXPORT_NORMALS
