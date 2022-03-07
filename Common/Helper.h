@@ -7,7 +7,7 @@
 
 #include <debugapi.h>
 
-namespace SpatialMapping {
+namespace BasicHologram {
 	namespace Helper
 	{
 		using namespace Windows::Storage;
