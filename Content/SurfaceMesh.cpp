@@ -291,6 +291,7 @@ void SurfaceMesh::UpdateVertexResources(
 #ifdef EXPORT_MESH
 							m_id = surfaceMesh->GetHashCode();
 							m_exportPositions.clear();
+							m_exportPositions.reserve(surfaceMesh->VertexPositions->ElementCount);
 #endif
 							float3 const posScale = surfaceMesh->VertexPositionScale;
 
@@ -338,12 +339,13 @@ void SurfaceMesh::UpdateVertexResources(
 
 #ifdef EXPORT_MESH
 							m_exportIndices.clear();
+							m_exportIndices.reserve(surfaceMesh->TriangleIndices->ElementCount);
 
 							// Cache for export
 							for (int i = 0; i < surfaceMesh->TriangleIndices->ElementCount; i++)
 							{
 								// +1 to get .obj format
-								m_exportIndices.push_back(indexData[i] + 1);
+								m_exportIndices.emplace_back(indexData[i] + 1);
 							}
 #endif
 						}
