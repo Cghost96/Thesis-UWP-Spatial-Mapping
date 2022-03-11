@@ -244,7 +244,7 @@ HolographicFrame^ SpatialMappingMain::Update()
 	{
 
 #ifdef USE_BOUNDING_BOX
-		SpatialBoundingVolume^ bounds = SpatialBoundingVolume::FromBox(currentCoordinateSystem, Options::BOUNDING_BOX);
+		SpatialBoundingVolume^ bounds = SpatialBoundingVolume::FromBox(currentCoordinateSystem, Options::OUTER_BOUNDING_BOX);
 #endif
 #ifdef USE_BOUNDING_FRUSTUM
 		SpatialBoundingVolume^ bounds = SpatialBoundingVolume::FromFrustum(currentCoordinateSystem, Options::BOUNDING_FRUSTUM);

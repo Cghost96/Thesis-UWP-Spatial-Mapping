@@ -28,7 +28,7 @@ using namespace Windows::Foundation::Numerics;
 
 namespace Options {
 	bool const DRAW_WIREFRAME_START_VALUE = true;
-	double const MAX_TRIANGLES_PER_CUBIC_METER = 200;
+	double const MAX_TRIANGLES_PER_CUBIC_METER = 2000;
 	float const MAX_INACTIVE_MESH_TIME = 60.0f * 5.0f;
 	float const MESH_FADE_IN_TIME = 1.5f;
 	bool const INCLUDE_VERTEX_NORMALS = true;
@@ -38,9 +38,13 @@ namespace Options {
 	// See "HoloLens 1 sensor evaluation.pdf" and "IEEEM - Technical Evaluation of HoloLens for Multimedia: A First Look.pdf"
 	//   for optimal bounding limits
 #ifdef USE_BOUNDING_BOX
-	SpatialBoundingBox const BOUNDING_BOX = {
+	SpatialBoundingBox const OUTER_BOUNDING_BOX = {
 			{0.f, 0.f, 0.f}, // At device-position
-			{2.f, 2.f, 2.f}
+			{1.f, 1.f, 2.5f}
+	};
+	SpatialBoundingBox const INNER_BOUNDING_BOX = {
+			{0.f, 0.f, 0.f}, // At device-position
+			{1.f, 1.f, 2.5f}
 	};
 #endif
 
