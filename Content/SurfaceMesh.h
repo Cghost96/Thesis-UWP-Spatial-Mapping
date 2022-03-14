@@ -39,7 +39,6 @@ namespace SpatialMapping
 		SurfaceMesh();
 		~SurfaceMesh();
 
-		inline static std::string meshFolderPath;
 		inline static bool canUpdate = true;
 		inline static SpatialCoordinateSystem^ fixedCoordSystem = nullptr;
 
@@ -73,8 +72,8 @@ namespace SpatialMapping
 
 		const std::vector<Windows::Foundation::Numerics::float3>* GetExportPositions() const { return &m_exportPositions; }
 		const std::vector<IndexFormat>* GetExportIndices() const { return &m_exportIndices; }
-		int GetID() const { return m_id; }
 		const SurfaceMeshProperties* GetSurfaceMeshProperties() const { return &m_meshProperties; }
+		int GetID() const { return m_id; }
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexPositions() const { return m_vertexPositions; }
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexNormals() const { return m_vertexNormals; }
@@ -102,7 +101,7 @@ namespace SpatialMapping
 
 		std::vector<float3> m_exportPositions;
 		std::vector<IndexFormat> m_exportIndices;
-		int m_id = 0;
+		int m_id;
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexPositions;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexNormals;

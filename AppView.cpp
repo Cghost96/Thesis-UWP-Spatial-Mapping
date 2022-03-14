@@ -67,8 +67,7 @@ void AppView::Initialize(CoreApplicationView^ applicationView)
 	// resources.
 	m_deviceResources = std::make_shared<DX::DeviceResources>();
 
-	// Set static variable
-	SurfaceMesh::meshFolderPath = Helper::SetupMeshFolder();
+	Helper::SetupMeshFolder();
 
 	m_main = std::make_unique<SpatialMappingMain>(m_deviceResources);
 }

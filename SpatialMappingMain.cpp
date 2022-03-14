@@ -19,6 +19,7 @@
 
 #include <string>
 #include <fstream>
+#include <iomanip>
 
 using namespace SpatialMapping;
 using namespace concurrency;
@@ -242,13 +243,8 @@ HolographicFrame^ SpatialMappingMain::Update()
 
 	if (m_surfaceAccessAllowed)
 	{
-
-#ifdef USE_BOUNDING_BOX
-		SpatialBoundingVolume^ bounds = SpatialBoundingVolume::FromBox(currentCoordinateSystem, Options::OUTER_BOUNDING_BOX);
-#endif
-#ifdef USE_BOUNDING_FRUSTUM
-		SpatialBoundingVolume^ bounds = SpatialBoundingVolume::FromFrustum(currentCoordinateSystem, Options::BOUNDING_FRUSTUM);
-#endif
+		SpatialBoundingVolume^ bounds = SpatialBoundingVolume::FromBox(currentCoordinateSystem, Options::BOUNDING_BOX);
+		
 		// If status is Allowed, we can create the surface observer.
 		if (m_surfaceObserver == nullptr)
 		{
@@ -321,19 +317,6 @@ HolographicFrame^ SpatialMappingMain::Update()
 				break;
 			}
 		}
-		//if (pointerState->IsSelectPressed) {
-		//	switch (pointerState->Source->Handedness)
-		//	{
-		//	case SpatialInteractionSourceHandedness::Left:
-
-		//		break;
-		//	case SpatialInteractionSourceHandedness::Right:
-
-		//		break;
-		//	default:
-		//		break;
-		//	}
-		//}
 	}
 
 	m_timer.Tick([&]()
@@ -445,19 +428,26 @@ void SpatialMappingMain::SaveAppState()
 	std::snprintf(file, 512, "%s\\meshes.obj", charStr);
 	std::ofstream fileOut(file, std::ios::out);
 
+	fileOut << "mtllib Mesh.mtl\n";
+
+	std::lock_guard<std::mutex> guard(m_exportMutex);
+
 	auto const meshMap = m_meshRenderer->MeshCollection();
 	for (auto const& pair : *meshMap) {
 
-		std::lock_guard<std::mutex> guard(m_exportMutex);
 		auto const& mesh = pair.second;
 
 		auto const positions = mesh.GetExportPositions();
 		auto const indices = mesh.GetExportIndices();
-		auto const id = mesh.GetID();
 
 		if ((*positions).size() > 0 && (*indices).size() > 0) {
+			auto const id = mesh.GetID();
+			auto const updateTime = mesh.GetLastUpdateTime().UniversalTime;
+			auto const activeTime = mesh.GetLastActiveTime();
 
 			fileOut << "o mesh_" << id << "\n";
+			fileOut << "# Timestamp update: " << updateTime << "\n";
+			fileOut << "# Timestamp active: " << activeTime << "\n";
 
 			for (auto const p : *positions) {
 				fileOut << "v " << p.x << " " << p.y << " " << p.z << "\n";
@@ -465,8 +455,14 @@ void SpatialMappingMain::SaveAppState()
 
 			fileOut << "\n";
 
+			float const noFaces = (*indices).size() / 3.f;
+			float const mtlIncrement = 1000.f / noFaces;
+			float mtlNumber = 1.f;
+
 			for (int i = 0; i < (*indices).size(); i++) {
+				fileOut << "usemtl Material." << std::setw(4) << std::setfill('0') << (int)std::floor(mtlNumber) << "\n";
 				fileOut << "f " << (*indices)[i] << " " << (*indices)[++i] << " " << (*indices)[++i] << "\n";
+				mtlNumber += mtlIncrement;
 			}
 
 			fileOut << "\n";

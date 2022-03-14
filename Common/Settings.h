@@ -4,7 +4,7 @@ using namespace Windows::Perception::Spatial;
 using namespace Windows::Foundation::Numerics;
 
 #define PROCESS_MESH
-#undef PROCESS_MESH
+//#undef PROCESS_MESH
 
 #define HIGHLIGHT_NEW_MESHES
 //#undef HIGHLIGHT_NEW_MESHES
@@ -20,12 +20,6 @@ using namespace Windows::Foundation::Numerics;
 #define USE_32BIT_INDICES
 #undef USE_32BIT_INDICES
 
-#define USE_BOUNDING_BOX
-//#undef USE_BOUNDING_BOX
-
-#define USE_BOUNDING_FRUSTUM
-#undef USE_BOUNDING_FRUSTUM
-
 namespace Options {
 	bool const DRAW_WIREFRAME_START_VALUE = true;
 	double const MAX_TRIANGLES_PER_CUBIC_METER = 2000;
@@ -35,27 +29,9 @@ namespace Options {
 
 
 	// Note that it is possible to set multiple bounding volumes with SetBoundingVolumes(*Iterable collection*);
-	// See "HoloLens 1 sensor evaluation.pdf" and "IEEEM - Technical Evaluation of HoloLens for Multimedia: A First Look.pdf"
-	//   for optimal bounding limits
-#ifdef USE_BOUNDING_BOX
-	SpatialBoundingBox const OUTER_BOUNDING_BOX = {
+	// See "HoloLens 1 sensor evaluation.pdf" and "IEEEM - Technical Evaluation of HoloLens for Multimedia: A First Look.pdf" for optimal bounding limits
+	SpatialBoundingBox const BOUNDING_BOX = {
 			{0.f, 0.f, 0.f}, // At device-position
 			{1.f, 1.f, 2.5f}
 	};
-	SpatialBoundingBox const INNER_BOUNDING_BOX = {
-			{0.f, 0.f, 0.f}, // At device-position
-			{1.f, 1.f, 2.5f}
-	};
-#endif
-
-#ifdef USE_BOUNDING_FRUSTUM
-	SpatialBoundingFrustum const BOUNDING_FRUSTUM = {
-		plane(), // Bottom
-		plane(), // Far
-		plane(), // Left
-		plane(), // Near
-		plane(), // Right
-		plane()  // Top
-	};
-#endif
 }
