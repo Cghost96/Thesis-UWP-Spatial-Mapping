@@ -105,7 +105,7 @@ namespace SpatialMapping
 		Windows::Perception::Spatial::Surfaces::SpatialSurfaceObserver^ m_surfaceObserver;
 		Windows::Perception::Spatial::Surfaces::SpatialSurfaceMeshOptions^ m_surfaceMeshOptions;
 
-		bool m_drawWirfeFrame = Options::DRAW_WIREFRAME_START_VALUE;
+		bool m_drawWirfeFrame = Options::DRAW_WIREFRAME_INIT_VALUE;
 
 		std::mutex m_exportMutex;
 	};

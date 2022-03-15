@@ -15,6 +15,7 @@
 #include "Content/SurfaceMesh.h"
 
 #include <filesystem>
+#include <thread>
 
 #include <ppltasks.h>
 
@@ -36,6 +37,7 @@ int main(Platform::Array<Platform::String^>^)
 {
 	AppViewSource^ appViewSource = ref new ::AppViewSource();
 	CoreApplication::Run(appViewSource);
+
 	return 0;
 }
 

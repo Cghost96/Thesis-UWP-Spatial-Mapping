@@ -13,6 +13,8 @@
 
 #include <ppltasks.h>
 
+#include <thread>
+
 #include <DirectXCollision.h>
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
@@ -256,26 +258,31 @@ void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& pos
 void SurfaceMesh::UpdateVertexResources(
 	ID3D11Device* device, Windows::Perception::Spatial::SpatialCoordinateSystem^ worldCoordSystem = nullptr)
 {
-	SpatialSurfaceMesh^ surfaceMesh = std::move(m_pendingSurfaceMesh);
-	if (!surfaceMesh || surfaceMesh->TriangleIndices->ElementCount < 3)
-	{
-		// Not enough indices to draw a triangle or there is no pending mesh.
-		return;
-	}
+	if (worldCoordSystem != nullptr && fixedCoordSystem != nullptr) {
 
-	if (canUpdate) {
-		// Surface mesh resources are created off-thread, so that they don't affect rendering latency.
-		m_updateVertexResourcesTask.then([this, device, surfaceMesh, worldCoordSystem]()
-			{
-				// Create new Direct3D device resources for the updated buffers. These will be set aside
-				// for now, and then swapped into the active slot next time the render loop is ready to draw.
+		SpatialSurfaceMesh^ surfaceMesh = std::move(m_pendingSurfaceMesh);
+		if (!surfaceMesh || surfaceMesh->TriangleIndices->ElementCount < 3)
+		{
+			// Not enough indices to draw a triangle or there is no pending mesh.
+			return;
+		}
 
-				// First, we acquire the raw data buffers.
-				IBuffer^ positions = surfaceMesh->VertexPositions->Data;
-				IBuffer^ normals = surfaceMesh->VertexNormals->Data;
-				IBuffer^ indices = surfaceMesh->TriangleIndices->Data;
+		if (canUpdate) {
+			// Surface mesh resources are created off-thread, so that they don't affect rendering latency.
+			m_updateVertexResourcesTask.then([this, device, surfaceMesh, worldCoordSystem]()
+				{
+					Helper::LogMessage<std::string>("\nUpdate mesh");
 
-				if (fixedCoordSystem != nullptr && worldCoordSystem != nullptr) {
+					// Create new Direct3D device resources for the updated buffers. These will be set aside
+					// for now, and then swapped into the active slot next time the render loop is ready to draw.
+
+					// First, we acquire the raw data buffers.
+					IBuffer^ positions = surfaceMesh->VertexPositions->Data;
+					IBuffer^ normals = surfaceMesh->VertexNormals->Data;
+					IBuffer^ indices = surfaceMesh->TriangleIndices->Data;
+
+					std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
+
 					SpatialCoordinateSystem^ const meshCoordSys = surfaceMesh->CoordinateSystem;
 					IBox<float4x4>^ const meshCoordSysToFixed = meshCoordSys->TryGetTransformTo(fixedCoordSystem);
 					IBox<float4x4>^ const fixedCoordSysToMesh = fixedCoordSystem->TryGetTransformTo(meshCoordSys);
@@ -285,15 +292,14 @@ void SurfaceMesh::UpdateVertexResources(
 						IndexFormat* const indexData = GetDataFromIBuffer<IndexFormat>(indices);
 
 						if (positionData != nullptr && indexData != nullptr) {
-#ifdef EXPORT_MESH
+							//std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
+#ifdef EXPORT_MESH				
 							m_id = surfaceMesh->GetHashCode();
 
 							m_exportPositions.clear();
-							m_exportPositions.reserve(surfaceMesh->VertexPositions->ElementCount);
+							//m_exportPositions.reserve(surfaceMesh->VertexPositions->ElementCount);
 #endif
 							float3 const pScale = surfaceMesh->VertexPositionScale;
-
-							std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
 
 							for (int i = 0; i < surfaceMesh->VertexPositions->ElementCount; i++)
 							{
@@ -333,7 +339,7 @@ void SurfaceMesh::UpdateVertexResources(
 
 #ifdef EXPORT_MESH
 							m_exportIndices.clear();
-							m_exportIndices.reserve(surfaceMesh->TriangleIndices->ElementCount);
+							//m_exportIndices.reserve(surfaceMesh->TriangleIndices->ElementCount);
 
 							// Cache for export
 							for (int i = 0; i < surfaceMesh->TriangleIndices->ElementCount; i++)
@@ -344,20 +350,19 @@ void SurfaceMesh::UpdateVertexResources(
 #endif
 						}
 					}
-				}
 
-				// Then, we create Direct3D device buffers with the mesh data provided by HoloLens.
-				Microsoft::WRL::ComPtr<ID3D11Buffer> updatedVertexPositions;
-				Microsoft::WRL::ComPtr<ID3D11Buffer> updatedVertexNormals;
-				Microsoft::WRL::ComPtr<ID3D11Buffer> updatedTriangleIndices;
+					// Then, we create Direct3D device buffers with the mesh data provided by HoloLens.
+					Microsoft::WRL::ComPtr<ID3D11Buffer> updatedVertexPositions;
+					Microsoft::WRL::ComPtr<ID3D11Buffer> updatedVertexNormals;
+					Microsoft::WRL::ComPtr<ID3D11Buffer> updatedTriangleIndices;
 
-				CreateDirectXBuffer(device, D3D11_BIND_VERTEX_BUFFER, positions, updatedVertexPositions.GetAddressOf());
-				CreateDirectXBuffer(device, D3D11_BIND_VERTEX_BUFFER, normals, updatedVertexNormals.GetAddressOf());
-				CreateDirectXBuffer(device, D3D11_BIND_INDEX_BUFFER, indices, updatedTriangleIndices.GetAddressOf());
+					CreateDirectXBuffer(device, D3D11_BIND_VERTEX_BUFFER, positions, updatedVertexPositions.GetAddressOf());
+					CreateDirectXBuffer(device, D3D11_BIND_VERTEX_BUFFER, normals, updatedVertexNormals.GetAddressOf());
+					CreateDirectXBuffer(device, D3D11_BIND_INDEX_BUFFER, indices, updatedTriangleIndices.GetAddressOf());
 
-				// Before updating the meshes, check to ensure that there wasn't a more recent update.
-				{
-					std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
+					// Before updating the meshes, check to ensure that there wasn't a more recent update.
+					//{
+						//std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
 					auto meshUpdateTime = surfaceMesh->SurfaceInfo->UpdateTime;
 					if (meshUpdateTime.UniversalTime > m_lastUpdateTime.UniversalTime)
 					{
@@ -380,8 +385,9 @@ void SurfaceMesh::UpdateVertexResources(
 						m_lastUpdateTime = meshUpdateTime;
 						m_loadingComplete = true;
 					}
-				}
-			});
+					//}
+				});
+		}
 	}
 }
 

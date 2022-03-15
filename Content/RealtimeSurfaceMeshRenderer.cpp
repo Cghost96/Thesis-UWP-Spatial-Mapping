@@ -13,6 +13,8 @@
 
 #include <DirectXPackedVector.h>
 
+#include <thread>
+
 #include "Common\DirectXHelper.h"
 #include "RealtimeSurfaceMeshRenderer.h"
 #include "GetDataFromIBuffer.h"
@@ -66,6 +68,9 @@ void RealtimeSurfaceMeshRenderer::Update(
 		float const inactiveDuration = timeElapsed - lastActiveTime;
 		if (inactiveDuration > c_maxInactiveMeshTime)
 		{
+			Helper::LogMessage<std::string>("\n\nErasing ");
+			Helper::LogMessage<int>(surfaceMesh.GetID());
+			Helper::LogMessage<std::string>("\n\n");
 			// Surface mesh is expired.
 			m_meshCollection.erase(iter++);
 		}
@@ -91,11 +96,11 @@ void RealtimeSurfaceMeshRenderer::AddSurface(Guid id, SpatialSurfaceInfo^ newSur
 				auto& surfaceMesh = m_meshCollection[id];
 				surfaceMesh.SetColorFadeTimer(c_surfaceMeshFadeInTime);
 			}
-		});
+			});
 #else
 	AddOrUpdateSurfaceAsync(id, newSurface);
 #endif
-}
+	}
 
 void RealtimeSurfaceMeshRenderer::UpdateSurface(Guid id, SpatialSurfaceInfo^ newSurface)
 {
