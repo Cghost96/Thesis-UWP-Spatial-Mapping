@@ -69,19 +69,16 @@ void RealtimeSurfaceMeshRenderer::Update(
 		if (inactiveDuration > c_maxInactiveMeshTime)
 		{
 			surfaceMesh.CanUpdate(false);
-			surfaceMesh.UpdateVertexResourcesTask()->wait();
+			//surfaceMesh.UpdateVertexResourcesTask()->wait();
 
 			Helper::LogMessage<std::string>("\n\nErasing ");
 			Helper::LogMessage<int>(surfaceMesh.GetID());
 			Helper::LogMessage<std::string>("\n\n");
 
 			// Surface mesh is expired.
-			m_meshCollection.erase(iter++);
+			m_meshCollection.erase(iter);
 		}
-		else
-		{
-			++iter;
-		}
+		++iter;
 	};
 }
 
@@ -100,11 +97,11 @@ void RealtimeSurfaceMeshRenderer::AddSurface(Guid id, SpatialSurfaceInfo^ newSur
 				auto& surfaceMesh = m_meshCollection[id];
 				surfaceMesh.SetColorFadeTimer(c_surfaceMeshFadeInTime);
 			}
-			});
+		});
 #else
 	AddOrUpdateSurfaceAsync(id, newSurface);
 #endif
-	}
+}
 
 void RealtimeSurfaceMeshRenderer::UpdateSurface(Guid id, SpatialSurfaceInfo^ newSurface)
 {
