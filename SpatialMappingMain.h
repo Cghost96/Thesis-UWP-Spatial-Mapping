@@ -46,6 +46,7 @@ namespace SpatialMapping
 		// Handle surface change events.
 		void OnSurfacesChanged(Windows::Perception::Spatial::Surfaces::SpatialSurfaceObserver^ sender, Platform::Object^ args);
 
+		std::unique_ptr<SpatialMapping::RealtimeSurfaceMeshRenderer>* MeshRenderer() { return &m_meshRenderer; }
 	private:
 		// Asynchronously creates resources for new holographic cameras.
 		void OnCameraAdded(

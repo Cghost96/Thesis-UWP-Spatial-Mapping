@@ -209,9 +209,6 @@ HolographicFrame^ SpatialMappingMain::Update()
 	// associated with the current frame. Later, this coordinate system is used for
 	// for creating the stereo view matrices when rendering the sample content.
 	SpatialCoordinateSystem^ currentCoordinateSystem = m_referenceFrame->GetStationaryCoordinateSystemAtTimestamp(prediction->Timestamp);
-	if (SurfaceMesh::fixedCoordSystem == nullptr) {
-		SurfaceMesh::fixedCoordSystem = currentCoordinateSystem;
-	}
 
 	// Only create a surface observer when you need to - do not create a new one each frame.
 	if (m_surfaceObserver == nullptr) {

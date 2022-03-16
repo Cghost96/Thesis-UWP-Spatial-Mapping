@@ -68,9 +68,13 @@ void RealtimeSurfaceMeshRenderer::Update(
 		float const inactiveDuration = timeElapsed - lastActiveTime;
 		if (inactiveDuration > c_maxInactiveMeshTime)
 		{
+			surfaceMesh.CanUpdate(false);
+			surfaceMesh.UpdateVertexResourcesTask()->wait();
+
 			Helper::LogMessage<std::string>("\n\nErasing ");
 			Helper::LogMessage<int>(surfaceMesh.GetID());
 			Helper::LogMessage<std::string>("\n\n");
+
 			// Surface mesh is expired.
 			m_meshCollection.erase(iter++);
 		}

@@ -39,9 +39,6 @@ namespace SpatialMapping
 		SurfaceMesh();
 		~SurfaceMesh();
 
-		inline static bool canUpdate = true;
-		inline static SpatialCoordinateSystem^ fixedCoordSystem = nullptr;
-
 		void UpdateSurface(Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ surface);
 		void UpdateTransform(
 			ID3D11Device* device,
@@ -79,6 +76,11 @@ namespace SpatialMapping
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexNormals() const { return m_vertexNormals; }
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetTriangleIndices() const { return m_triangleIndices; }
 
+		bool CanUpdate() const { return m_canUpdate; }
+		void CanUpdate(bool val) { m_canUpdate = val; }
+
+		const concurrency::task<void>* UpdateVertexResourcesTask() const { return &m_updateVertexResourcesTask; }
+
 	private:
 		void SwapVertexBuffers();
 		void CreateDirectXBuffer(
@@ -102,6 +104,7 @@ namespace SpatialMapping
 		std::vector<float3> m_exportPositions;
 		std::vector<IndexFormat> m_exportIndices;
 		int m_id;
+		bool m_canUpdate = true;
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexPositions;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexNormals;

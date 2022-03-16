@@ -155,7 +155,9 @@ void AppView::OnViewActivated(CoreApplicationView^ sender, IActivatedEventArgs^ 
 
 void AppView::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
 {
-	SurfaceMesh::canUpdate = false;
+	for (auto& pair : *(*m_main->MeshRenderer())->MeshCollection()) {
+		pair.second.CanUpdate(false);
+	}
 
 	// Save app state asynchronously after requesting a deferral. Holding a deferral
 	// indicates that the application is busy performing suspending operations. Be

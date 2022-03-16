@@ -47,7 +47,7 @@ namespace SpatialMapping
 			Windows::Foundation::Collections::IMapView<Platform::Guid,
 			Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^>^ const& surfaceCollection);
 
-		const std::map<Platform::Guid, SpatialMapping::SurfaceMesh>* MeshCollection() const { return &m_meshCollection; }
+		std::map<Platform::Guid, SpatialMapping::SurfaceMesh>* MeshCollection() { return &m_meshCollection; }
 
 	private:
 		Concurrency::task<void> AddOrUpdateSurfaceAsync(Platform::Guid id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
