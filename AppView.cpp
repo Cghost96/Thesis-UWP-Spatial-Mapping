@@ -156,7 +156,7 @@ void AppView::OnViewActivated(CoreApplicationView^ sender, IActivatedEventArgs^ 
 void AppView::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
 {
 	for (auto& pair : *(*m_main->MeshRenderer())->MeshCollection()) {
-		pair.second.CanUpdate(false);
+		pair.second.ShuttingDown(true);
 	}
 
 	// Save app state asynchronously after requesting a deferral. Holding a deferral

@@ -46,40 +46,40 @@ namespace SpatialMapping
 			DX::StepTimer const& timer,
 			Windows::Perception::Spatial::SpatialCoordinateSystem^ baseCoordinateSystem
 		);
-
 		void Draw(ID3D11Device* device, ID3D11DeviceContext* context, bool usingVprtShaders, bool isStereo);
-
 		void UpdateVertexResources(ID3D11Device* device, Windows::Perception::Spatial::SpatialCoordinateSystem^ worldCoordSystem);
 		void CreateDeviceDependentResources(ID3D11Device* device);
 		void ReleaseVertexResources();
 		void ReleaseDeviceDependentResources();
 
-		const bool& GetIsActive()       const { return m_isActive; }
-		const float& GetLastActiveTime() const { return m_lastActiveTime; }
-		const Windows::Foundation::DateTime& GetLastUpdateTime() const { return m_lastUpdateTime; }
-
-		void SetIsActive(const bool& isActive) { m_isActive = isActive; }
-		void SetColorFadeTimer(const float& duration) { m_colorFadeTimeout = duration; m_colorFadeTimer = 0.f; }
-
 #ifdef USE_32BIT_INDICES
 		using IndexFormat = uint32_t;
 #else
 		using IndexFormat = uint16_t;
-#endif // USE_32BIT_INDICES
-
+#endif
+		const bool& IsActive()       const { return m_isActive; }
+		const float& LastActiveTime() const { return m_lastActiveTime; }
+		const Windows::Foundation::DateTime& LastUpdateTime() const { return m_lastUpdateTime; }
 		const std::vector<Windows::Foundation::Numerics::float3>* GetExportPositions() const { return &m_exportPositions; }
 		const std::vector<IndexFormat>* GetExportIndices() const { return &m_exportIndices; }
 		const SurfaceMeshProperties* GetSurfaceMeshProperties() const { return &m_meshProperties; }
-		int GetID() const { return m_id; }
-
+		int ID() const { return m_id; }
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexPositions() const { return m_vertexPositions; }
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexNormals() const { return m_vertexNormals; }
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetTriangleIndices() const { return m_triangleIndices; }
 
-		bool CanUpdate() const { return m_canUpdate; }
-		void CanUpdate(bool val) { m_canUpdate = val; }
 
-		const concurrency::task<void>* UpdateVertexResourcesTask() const { return &m_updateVertexResourcesTask; }
+		void IsActive(const bool& isActive) { m_isActive = isActive; }
+		void ColorFadeTimer(const float& duration) {
+			m_colorFadeTimeout = duration;
+			m_colorFadeTimer = 0.f;
+		}
+		void ShuttingDown(const bool val) { m_isShuttingDown = val; }
+		bool Expired() const { return m_isExpired; }
+		void Expired(const bool val) {
+			m_isExpired = val;
+			m_isActive = !val;
+		}
 
 	private:
 		void SwapVertexBuffers();
@@ -89,12 +89,6 @@ namespace SpatialMapping
 			Windows::Storage::Streams::IBuffer^ buffer,
 			ID3D11Buffer** target
 		);
-		void CalculateRegression(
-			Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ surface,
-			Windows::Storage::Streams::IBuffer^& positions,
-			Windows::Storage::Streams::IBuffer^& normals,
-			Windows::Storage::Streams::IBuffer^& indices,
-			Windows::Perception::Spatial::SpatialCoordinateSystem^ currentCoordSys);
 
 		concurrency::task<void> m_updateVertexResourcesTask = concurrency::task_from_result();
 
@@ -104,7 +98,8 @@ namespace SpatialMapping
 		std::vector<float3> m_exportPositions;
 		std::vector<IndexFormat> m_exportIndices;
 		int m_id;
-		bool m_canUpdate = true;
+		bool m_isShuttingDown = false;
+		bool m_isExpired = false;
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexPositions;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexNormals;

@@ -249,16 +249,10 @@ void SurfaceMesh::CreateDirectXBuffer(
 	device->CreateBuffer(&bufferDescription, &bufferBytes, target);
 }
 
-void SurfaceMesh::CalculateRegression(SpatialSurfaceMesh^ surface, IBuffer^& positions,
-	IBuffer^& normals, IBuffer^& indices, SpatialCoordinateSystem^ currentCoordSys)
-{
-
-}
-
 void SurfaceMesh::UpdateVertexResources(
 	ID3D11Device* device, Windows::Perception::Spatial::SpatialCoordinateSystem^ worldCoordSystem = nullptr)
 {
-	if (worldCoordSystem != nullptr && m_canUpdate) {
+	if (!Expired() && !m_isShuttingDown && worldCoordSystem != nullptr) {
 
 		SpatialSurfaceMesh^ surfaceMesh = std::move(m_pendingSurfaceMesh);
 		if (!surfaceMesh || surfaceMesh->TriangleIndices->ElementCount < 3)
@@ -270,17 +264,14 @@ void SurfaceMesh::UpdateVertexResources(
 		// Surface mesh resources are created off-thread, so that they don't affect rendering latency.
 		m_updateVertexResourcesTask.then([this, device, surfaceMesh, worldCoordSystem]()
 			{
-				Helper::LogMessage<std::string>("\nUpdate mesh");
-
 				// Create new Direct3D device resources for the updated buffers. These will be set aside
 				// for now, and then swapped into the active slot next time the render loop is ready to draw.
+				std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
 
 				// First, we acquire the raw data buffers.
 				IBuffer^ positions = surfaceMesh->VertexPositions->Data;
 				IBuffer^ normals = surfaceMesh->VertexNormals->Data;
 				IBuffer^ indices = surfaceMesh->TriangleIndices->Data;
-
-				std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
 
 				SpatialCoordinateSystem^ const meshCoordSys = surfaceMesh->CoordinateSystem;
 				IBox<float4x4>^ const meshCoordSysToWorld = meshCoordSys->TryGetTransformTo(worldCoordSystem);
@@ -295,7 +286,7 @@ void SurfaceMesh::UpdateVertexResources(
 						m_id = surfaceMesh->GetHashCode();
 
 						m_exportPositions.clear();
-						//m_exportPositions.reserve(surfaceMesh->VertexPositions->ElementCount);
+						m_exportPositions.reserve(surfaceMesh->VertexPositions->ElementCount);
 #endif
 						float3 const pScale = surfaceMesh->VertexPositionScale;
 
@@ -320,7 +311,7 @@ void SurfaceMesh::UpdateVertexResources(
 
 
 #ifdef EXPORT_MESH
-								// Cache for export
+							// Cache for export
 							m_exportPositions.push_back(pMeshToWorld);
 #endif
 
@@ -337,7 +328,7 @@ void SurfaceMesh::UpdateVertexResources(
 
 #ifdef EXPORT_MESH
 						m_exportIndices.clear();
-						//m_exportIndices.reserve(surfaceMesh->TriangleIndices->ElementCount);
+						m_exportIndices.reserve(surfaceMesh->TriangleIndices->ElementCount);
 
 						// Cache for export
 						for (int i = 0; i < surfaceMesh->TriangleIndices->ElementCount; i++)

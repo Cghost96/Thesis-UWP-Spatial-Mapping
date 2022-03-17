@@ -37,11 +37,8 @@ namespace SpatialMapping
 		bool HasSurface(Platform::Guid id);
 		void AddSurface(Platform::Guid id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
 		void UpdateSurface(Platform::Guid id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
-		void RemoveSurface(Platform::Guid id);
-		void ClearSurfaces();
-		//void ExportMeshes(Windows::Perception::Spatial::SpatialCoordinateSystem^& const worldCoordinateSystem);
 
-		Windows::Foundation::DateTime GetLastUpdateTime(Platform::Guid id);
+		Windows::Foundation::DateTime LastUpdateTime(Platform::Guid id);
 
 		void HideInactiveMeshes(
 			Windows::Foundation::Collections::IMapView<Platform::Guid,
@@ -51,7 +48,6 @@ namespace SpatialMapping
 
 	private:
 		Concurrency::task<void> AddOrUpdateSurfaceAsync(Platform::Guid id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
-		concurrency::task<void> m_exportMeshesTask = concurrency::task_from_result();
 
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources>            m_deviceResources;
@@ -68,11 +64,8 @@ namespace SpatialMapping
 		// A way to lock map access.
 		std::mutex                                      m_meshCollectionLock;
 
-		// Total number of surface meshes.
-		unsigned int                                    m_surfaceMeshCount;
-
 		// Level of detail setting. The number of triangles that the system is allowed to provide per cubic meter.
-		double                                          m_maxTrianglesPerCubicMeter = Options::MAX_TRIANGLES_PER_CUBIC_METER;
+		double const                                    m_maxTrianglesPerCubicMeter = Options::MAX_TRIANGLES_PER_CUBIC_METER;
 
 		// If the current D3D Device supports VPRT, we can avoid using a geometry
 		// shader just to set the render target array index.
@@ -83,10 +76,10 @@ namespace SpatialMapping
 		Microsoft::WRL::ComPtr<ID3D11RasterizerState>   m_wireframeRasterizerState;
 
 		// The duration of time, in seconds, a mesh is allowed to remain inactive before deletion.
-		const float c_maxInactiveMeshTime = Options::MAX_INACTIVE_MESH_TIME;
+		const float m_maxInactiveMeshTime = Options::MAX_INACTIVE_MESH_TIME;
 
 		// The duration of time, in seconds, taken for a new surface mesh to fade in on-screen.
-		const float c_surfaceMeshFadeInTime = Options::MESH_FADE_IN_TIME;
+		const float m_surfaceMeshFadeInTime = Options::MESH_FADE_IN_TIME;
 
 		bool m_loadingComplete;
 	};

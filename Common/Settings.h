@@ -6,14 +6,8 @@ using namespace Windows::Foundation::Numerics;
 #define PROCESS_MESH
 //#undef PROCESS_MESH
 
-#define HIGHLIGHT_NEW_MESHES
-//#undef HIGHLIGHT_NEW_MESHES
-
 #define EXPORT_MESH
 //#undef EXPORT_MESH
-
-#define EXPORT_NORMALS
-#undef EXPORT_NORMALS
 
 // If you are using a very high detail setting with spatial mapping, it can be beneficial
 // to use a 32-bit unsigned integer format for indices instead of the default 16-bit. 
@@ -23,7 +17,7 @@ using namespace Windows::Foundation::Numerics;
 namespace Options {
 	bool const DRAW_WIREFRAME_INIT_VALUE = true;
 	double const MAX_TRIANGLES_PER_CUBIC_METER = 200;
-	float const MAX_INACTIVE_MESH_TIME = 60.0f * 0.5f;
+	float const MAX_INACTIVE_MESH_TIME = 60.0f * 5.0f;
 	float const MESH_FADE_IN_TIME = 1.5f;
 	bool const INCLUDE_VERTEX_NORMALS = true;
 

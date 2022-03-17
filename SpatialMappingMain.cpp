@@ -164,7 +164,7 @@ void SpatialMappingMain::OnSurfacesChanged(
 
 		if (m_meshRenderer->HasSurface(id))
 		{
-			if (m_meshRenderer->GetLastUpdateTime(id).UniversalTime < surfaceInfo->UpdateTime.UniversalTime)
+			if (m_meshRenderer->LastUpdateTime(id).UniversalTime < surfaceInfo->UpdateTime.UniversalTime)
 			{
 				// Update existing surface.
 				m_meshRenderer->UpdateSurface(id, surfaceInfo);
@@ -241,7 +241,7 @@ HolographicFrame^ SpatialMappingMain::Update()
 	if (m_surfaceAccessAllowed)
 	{
 		SpatialBoundingVolume^ bounds = SpatialBoundingVolume::FromBox(currentCoordinateSystem, Options::BOUNDING_BOX);
-		
+
 		// If status is Allowed, we can create the surface observer.
 		if (m_surfaceObserver == nullptr)
 		{
@@ -434,13 +434,13 @@ void SpatialMappingMain::SaveAppState()
 
 		auto const& mesh = pair.second;
 
-		auto const positions = mesh.GetExportPositions();
-		auto const indices = mesh.GetExportIndices();
+		if (!mesh.Expired()) {
+			auto const positions = mesh.GetExportPositions();
+			auto const indices = mesh.GetExportIndices();
 
-		if ((*positions).size() > 0 && (*indices).size() > 0) {
-			auto const id = mesh.GetID();
-			auto const updateTime = mesh.GetLastUpdateTime().UniversalTime;
-			auto const activeTime = mesh.GetLastActiveTime();
+			auto const id = mesh.ID();
+			auto const updateTime = mesh.LastUpdateTime().UniversalTime;
+			auto const activeTime = mesh.LastActiveTime();
 
 			fileOut << "o mesh_" << id << "\n";
 			fileOut << "# Timestamp update: " << updateTime << "\n";

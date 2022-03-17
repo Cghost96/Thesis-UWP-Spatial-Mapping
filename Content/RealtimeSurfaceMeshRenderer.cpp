@@ -50,7 +50,7 @@ void RealtimeSurfaceMeshRenderer::Update(
 
 	// Update meshes as needed, based on the current coordinate system.
 	// Also remove meshes that are inactive for too long.
-	for (auto iter = m_meshCollection.begin(); iter != m_meshCollection.end();)
+	for (auto iter = m_meshCollection.begin(); iter != m_meshCollection.end(); iter++)
 	{
 		auto& pair = *iter;
 		auto& surfaceMesh = pair.second;
@@ -64,27 +64,18 @@ void RealtimeSurfaceMeshRenderer::Update(
 		);
 
 		// Check to see if the mesh has expired.
-		float const lastActiveTime = surfaceMesh.GetLastActiveTime();
+		float const lastActiveTime = surfaceMesh.LastActiveTime();
 		float const inactiveDuration = timeElapsed - lastActiveTime;
-		if (inactiveDuration > c_maxInactiveMeshTime)
+		if (inactiveDuration > m_maxInactiveMeshTime)
 		{
-			surfaceMesh.CanUpdate(false);
-			//surfaceMesh.UpdateVertexResourcesTask()->wait();
-
-			Helper::LogMessage<std::string>("\n\nErasing ");
-			Helper::LogMessage<int>(surfaceMesh.GetID());
-			Helper::LogMessage<std::string>("\n\n");
-
-			// Surface mesh is expired.
-			m_meshCollection.erase(iter);
+			surfaceMesh.Expired(true);
+			//m_meshCollection.erase(iter);
 		}
-		++iter;
 	};
 }
 
 void RealtimeSurfaceMeshRenderer::AddSurface(Guid id, SpatialSurfaceInfo^ newSurface)
 {
-#ifdef HIGHLIGHT_NEW_MESHES
 	auto fadeInMeshTask = AddOrUpdateSurfaceAsync(id, newSurface).then([this, id]()
 		{
 			if (HasSurface(id))
@@ -95,12 +86,9 @@ void RealtimeSurfaceMeshRenderer::AddSurface(Guid id, SpatialSurfaceInfo^ newSur
 				// color. This allows you to observe changes in the spatial map that are due to new meshes,
 				// as opposed to mesh updates.
 				auto& surfaceMesh = m_meshCollection[id];
-				surfaceMesh.SetColorFadeTimer(c_surfaceMeshFadeInTime);
+				surfaceMesh.ColorFadeTimer(m_surfaceMeshFadeInTime);
 			}
 		});
-#else
-	AddOrUpdateSurfaceAsync(id, newSurface);
-#endif
 }
 
 void RealtimeSurfaceMeshRenderer::UpdateSurface(Guid id, SpatialSurfaceInfo^ newSurface)
@@ -122,23 +110,11 @@ Concurrency::task<void> RealtimeSurfaceMeshRenderer::AddOrUpdateSurfaceAsync(Gui
 
 				auto& surfaceMesh = m_meshCollection[id];
 				surfaceMesh.UpdateSurface(mesh);
-				surfaceMesh.SetIsActive(true);
+				surfaceMesh.Expired(false);
 			}
 		}, task_continuation_context::use_current());
 
 	return processMeshTask;
-}
-
-void RealtimeSurfaceMeshRenderer::RemoveSurface(Guid id)
-{
-	std::lock_guard<std::mutex> guard(m_meshCollectionLock);
-	m_meshCollection.erase(id);
-}
-
-void RealtimeSurfaceMeshRenderer::ClearSurfaces()
-{
-	std::lock_guard<std::mutex> guard(m_meshCollectionLock);
-	m_meshCollection.clear();
 }
 
 void RealtimeSurfaceMeshRenderer::HideInactiveMeshes(IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection)
@@ -151,7 +127,7 @@ void RealtimeSurfaceMeshRenderer::HideInactiveMeshes(IMapView<Guid, SpatialSurfa
 		const auto& id = pair.first;
 		auto& surfaceMesh = pair.second;
 
-		surfaceMesh.SetIsActive(surfaceCollection->HasKey(id));
+		surfaceMesh.IsActive(surfaceCollection->HasKey(id));
 	};
 }
 
@@ -380,14 +356,14 @@ bool RealtimeSurfaceMeshRenderer::HasSurface(Platform::Guid id)
 	return m_meshCollection.find(id) != m_meshCollection.end();
 }
 
-Windows::Foundation::DateTime RealtimeSurfaceMeshRenderer::GetLastUpdateTime(Platform::Guid id)
+Windows::Foundation::DateTime RealtimeSurfaceMeshRenderer::LastUpdateTime(Platform::Guid id)
 {
 	std::lock_guard<std::mutex> guard(m_meshCollectionLock);
 	auto& meshIter = m_meshCollection.find(id);
 	if (meshIter != m_meshCollection.end())
 	{
 		auto const& mesh = meshIter->second;
-		return mesh.GetLastUpdateTime();
+		return mesh.LastUpdateTime();
 	}
 	else
 	{
