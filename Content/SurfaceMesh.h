@@ -62,6 +62,7 @@ namespace SpatialMapping
 		const Windows::Foundation::DateTime& LastUpdateTime() const { return m_lastUpdateTime; }
 		const std::vector<Windows::Foundation::Numerics::float3>* GetExportPositions() const { return &m_exportPositions; }
 		const std::vector<IndexFormat>* GetExportIndices() const { return &m_exportIndices; }
+		const std::vector<Windows::Foundation::Numerics::float3>* GetExportNormals() const { return &m_exportNormals; }
 		const SurfaceMeshProperties* GetSurfaceMeshProperties() const { return &m_meshProperties; }
 		int ID() const { return m_id; }
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexPositions() const { return m_vertexPositions; }
@@ -96,10 +97,8 @@ namespace SpatialMapping
 		Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ m_surfaceMesh = nullptr;
 
 		std::vector<float3> m_exportPositions;
+		std::vector<float3> m_exportNormals;
 		std::vector<IndexFormat> m_exportIndices;
-		int m_id;
-		bool m_isShuttingDown = false;
-		bool m_isExpired = false;
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexPositions;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexNormals;
@@ -120,9 +119,12 @@ namespace SpatialMapping
 		bool   m_loadingComplete = false;
 		bool   m_updateReady = false;
 		bool   m_isActive = false;
+		bool m_isShuttingDown = false;
+		bool m_isExpired = false;
 		float  m_lastActiveTime = -1.f;
 		float  m_colorFadeTimer = -1.f;
 		float  m_colorFadeTimeout = -1.f;
+		int m_id;
 
 		std::mutex m_meshResourcesMutex;
 	};

@@ -436,6 +436,7 @@ void SpatialMappingMain::SaveAppState()
 
 		if (!mesh.Expired()) {
 			auto const positions = mesh.GetExportPositions();
+			auto const normals = mesh.GetExportNormals();
 			auto const indices = mesh.GetExportIndices();
 
 			auto const id = mesh.ID();
@@ -446,8 +447,14 @@ void SpatialMappingMain::SaveAppState()
 			fileOut << "# Timestamp update: " << updateTime << "\n";
 			fileOut << "# Timestamp active: " << activeTime << "\n";
 
-			for (auto const p : *positions) {
+			for (auto const& p : *positions) {
 				fileOut << "v " << p.x << " " << p.y << " " << p.z << "\n";
+			}
+
+			fileOut << "\n";
+
+			for (auto const& n : *normals) {
+				fileOut << "vn " << n.x << " " << n.y << " " << n.z << "\n";
 			}
 
 			fileOut << "\n";
@@ -456,9 +463,16 @@ void SpatialMappingMain::SaveAppState()
 			float const mtlIncrement = 1000.f / noFaces;
 			float mtlNumber = 1.f;
 
-			for (int i = 0; i < (*indices).size(); i++) {
+			for (int i = 0; i < (*indices).size(); i += 3) {
 				fileOut << "usemtl Material." << std::setw(4) << std::setfill('0') << (int)std::floor(mtlNumber) << "\n";
-				fileOut << "f " << (*indices)[i] << " " << (*indices)[++i] << " " << (*indices)[++i] << "\n";
+				
+				//#TODO Check indices for normals
+
+				fileOut << "f " 
+					<< (*indices)[i] << "//" << (*indices)[i] /*i + 1*/ << " "
+					<< (*indices)[i + 1] << "//" << (*indices)[i + 1] /*i + 1*/ << " "
+					<< (*indices)[i + 2] << "//" << (*indices)[i + 2] /*i + 1*/ << "\n";
+				fileOut << "# " << i + 1 << "\n";
 				mtlNumber += mtlIncrement;
 			}
 

@@ -252,7 +252,7 @@ void SurfaceMesh::CreateDirectXBuffer(
 void SurfaceMesh::UpdateVertexResources(
 	ID3D11Device* device, Windows::Perception::Spatial::SpatialCoordinateSystem^ worldCoordSystem = nullptr)
 {
-	if (!Expired() && !m_isShuttingDown && worldCoordSystem != nullptr) {
+	if (!m_isExpired && !m_isShuttingDown && worldCoordSystem != nullptr) {
 
 		SpatialSurfaceMesh^ surfaceMesh = std::move(m_pendingSurfaceMesh);
 		if (!surfaceMesh || surfaceMesh->TriangleIndices->ElementCount < 3)
@@ -279,9 +279,10 @@ void SurfaceMesh::UpdateVertexResources(
 
 				if (meshCoordSysToWorld && worldCoordSysToMesh) {
 					XMSHORTN4* const positionData = GetDataFromIBuffer<XMSHORTN4>(positions);
+					XMBYTEN4* const normalData = GetDataFromIBuffer<XMBYTEN4>(normals);
 					IndexFormat* const indexData = GetDataFromIBuffer<IndexFormat>(indices);
 
-					if (positionData != nullptr && indexData != nullptr) {
+					if (positionData != nullptr && normalData != nullptr && indexData != nullptr) {
 #ifdef EXPORT_MESH				
 						m_id = surfaceMesh->GetHashCode();
 
@@ -303,6 +304,7 @@ void SurfaceMesh::UpdateVertexResources(
 
 							// Process
 #ifdef PROCESS_MESH
+								// #TODO Move the processing elsewhere, need to store the w-value as well?
 								//pMeshToWorld.x *= 1.5f;
 								//pScaled.x *= 1.5f;
 								//pMeshToWorld.y *= .5f;
@@ -327,10 +329,22 @@ void SurfaceMesh::UpdateVertexResources(
 						}
 
 #ifdef EXPORT_MESH
+						// Cache for export
+						
+						m_exportNormals.clear();
+						m_exportNormals.reserve(surfaceMesh->VertexNormals->ElementCount);
+
+						for (int i = 0; i < surfaceMesh->VertexNormals->ElementCount; i++) {
+							XMFLOAT4 n;
+							XMVECTOR const vec = XMLoadByteN4(&normalData[i]);
+							XMStoreFloat4(&n, vec);
+
+							m_exportNormals.emplace_back(n.x, n.y, n.z);
+						}
+
 						m_exportIndices.clear();
 						m_exportIndices.reserve(surfaceMesh->TriangleIndices->ElementCount);
 
-						// Cache for export
 						for (int i = 0; i < surfaceMesh->TriangleIndices->ElementCount; i++)
 						{
 							// +1 to get .obj format
