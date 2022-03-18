@@ -108,9 +108,17 @@ Concurrency::task<void> RealtimeSurfaceMeshRenderer::AddOrUpdateSurfaceAsync(Gui
 			{
 				std::lock_guard<std::mutex> guard(m_meshCollectionLock);
 
-				auto& surfaceMesh = m_meshCollection[id];
-				surfaceMesh.UpdateSurface(mesh);
-				surfaceMesh.Expired(false);
+				SurfaceMesh& surfaceMesh = m_meshCollection[id];
+				if (!surfaceMesh.Expired()) {
+					surfaceMesh.UpdateSurface(mesh);
+					surfaceMesh.IsActive(true);
+				}
+				else {
+					surfaceMesh.Reset();
+					surfaceMesh.UpdateSurface(mesh);
+					surfaceMesh.IsActive(true);
+					surfaceMesh.Expired(false);
+				}
 			}
 		}, task_continuation_context::use_current());
 

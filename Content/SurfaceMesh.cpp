@@ -268,7 +268,6 @@ void SurfaceMesh::UpdateVertexResources(
 				// for now, and then swapped into the active slot next time the render loop is ready to draw.
 				std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
 
-				// First, we acquire the raw data buffers.
 				IBuffer^ positions = surfaceMesh->VertexPositions->Data;
 				IBuffer^ normals = surfaceMesh->VertexNormals->Data;
 				IBuffer^ indices = surfaceMesh->TriangleIndices->Data;
@@ -279,15 +278,14 @@ void SurfaceMesh::UpdateVertexResources(
 
 				if (meshCoordSysToWorld && worldCoordSysToMesh) {
 					XMSHORTN4* const positionData = GetDataFromIBuffer<XMSHORTN4>(positions);
-					XMBYTEN4* const normalData = GetDataFromIBuffer<XMBYTEN4>(normals);
+					//XMBYTEN4* const normalData = GetDataFromIBuffer<XMBYTEN4>(normals);
 					IndexFormat* const indexData = GetDataFromIBuffer<IndexFormat>(indices);
 
-					if (positionData != nullptr && normalData != nullptr && indexData != nullptr) {
+					if (positionData != nullptr /*&& normalData != nullptr*/ && indexData != nullptr) {
 #ifdef EXPORT_MESH				
 						m_id = surfaceMesh->GetHashCode();
 
 						m_exportPositions.clear();
-						m_exportPositions.reserve(surfaceMesh->VertexPositions->ElementCount);
 #endif
 						float3 const pScale = surfaceMesh->VertexPositionScale;
 
@@ -302,48 +300,34 @@ void SurfaceMesh::UpdateVertexResources(
 							float3 const pScaled = float3(p.x * pScale.x, p.y * pScale.y, p.z * pScale.z);
 							float3 pMeshToWorld = transform(pScaled, meshCoordSysToWorld->Value);
 
-							// Process
-#ifdef PROCESS_MESH
-								// #TODO Move the processing elsewhere, need to store the w-value as well?
-								//pMeshToWorld.x *= 1.5f;
-								//pScaled.x *= 1.5f;
-								//pMeshToWorld.y *= .5f;
-								//pScaled.y *= .5f;
-#endif
-
-
 #ifdef EXPORT_MESH
 							// Cache for export
 							m_exportPositions.push_back(pMeshToWorld);
 #endif
 
 							// Insert back into app
-							float3 const pWorldToMesh = transform(pMeshToWorld, worldCoordSysToMesh->Value);
-							p = { pWorldToMesh.x / pScale.x, pWorldToMesh.y / pScale.y, pWorldToMesh.z / pScale.z, p.w };
+							//float3 const pWorldToMesh = transform(pMeshToWorld, worldCoordSysToMesh->Value);
+							//p = { pWorldToMesh.x / pScale.x, pWorldToMesh.y / pScale.y, pWorldToMesh.z / pScale.z, p.w };
 
-							XMSHORTN4 pUpdated;
-							XMVECTOR const vecUpdated = XMLoadFloat4(&p);
-							XMStoreShortN4(&pUpdated, vecUpdated);
+							//XMSHORTN4 pUpdated;
+							//XMVECTOR const vecUpdated = XMLoadFloat4(&p);
+							//XMStoreShortN4(&pUpdated, vecUpdated);
 
-							positionData[i] = pUpdated;
+							//positionData[i] = pUpdated;
 						}
 
 #ifdef EXPORT_MESH
-						// Cache for export
-						
-						m_exportNormals.clear();
-						m_exportNormals.reserve(surfaceMesh->VertexNormals->ElementCount);
+						//m_exportNormals.clear();
 
-						for (int i = 0; i < surfaceMesh->VertexNormals->ElementCount; i++) {
-							XMFLOAT4 n;
-							XMVECTOR const vec = XMLoadByteN4(&normalData[i]);
-							XMStoreFloat4(&n, vec);
+						//for (int i = 0; i < surfaceMesh->VertexNormals->ElementCount; i++) {
+						//	XMFLOAT4 n;
+						//	XMVECTOR const vec = XMLoadByteN4(&normalData[i]);
+						//	XMStoreFloat4(&n, vec);
 
-							m_exportNormals.emplace_back(n.x, n.y, n.z);
-						}
+						//	m_exportNormals.emplace_back(n.x, n.y, n.z);
+						//}
 
 						m_exportIndices.clear();
-						m_exportIndices.reserve(surfaceMesh->TriangleIndices->ElementCount);
 
 						for (int i = 0; i < surfaceMesh->TriangleIndices->ElementCount; i++)
 						{
@@ -457,4 +441,15 @@ void SurfaceMesh::ReleaseDeviceDependentResources()
 
 	m_constantBufferCreated = false;
 	m_loadingComplete = false;
+}
+
+void SurfaceMesh::Reset()
+{
+	std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
+
+	ReleaseDeviceDependentResources();
+	m_lastUpdateTime.UniversalTime = 0;
+
+	m_id = 0;
+	m_isActive = false;
 }

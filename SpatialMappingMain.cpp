@@ -430,13 +430,11 @@ void SpatialMappingMain::SaveAppState()
 	std::lock_guard<std::mutex> guard(m_exportMutex);
 
 	auto const meshMap = m_meshRenderer->MeshCollection();
-	for (auto const& pair : *meshMap) {
 
-		auto const& mesh = pair.second;
-
+	for (auto const& [guid, mesh] : *meshMap) {
 		if (!mesh.Expired()) {
 			auto const positions = mesh.GetExportPositions();
-			auto const normals = mesh.GetExportNormals();
+			//auto const normals = mesh.GetExportNormals();
 			auto const indices = mesh.GetExportIndices();
 
 			auto const id = mesh.ID();
@@ -451,13 +449,11 @@ void SpatialMappingMain::SaveAppState()
 				fileOut << "v " << p.x << " " << p.y << " " << p.z << "\n";
 			}
 
-			fileOut << "\n";
+			fileOut << "s off\n";
 
-			for (auto const& n : *normals) {
-				fileOut << "vn " << n.x << " " << n.y << " " << n.z << "\n";
-			}
-
-			fileOut << "\n";
+			//for (auto const& n : *normals) {
+			//	fileOut << "vn " << n.x << " " << n.y << " " << n.z << "\n";
+			//}
 
 			float const noFaces = (*indices).size() / 3.f;
 			float const mtlIncrement = 1000.f / noFaces;
@@ -465,18 +461,13 @@ void SpatialMappingMain::SaveAppState()
 
 			for (int i = 0; i < (*indices).size(); i += 3) {
 				fileOut << "usemtl Material." << std::setw(4) << std::setfill('0') << (int)std::floor(mtlNumber) << "\n";
-				
-				//#TODO Check indices for normals
 
-				fileOut << "f " 
-					<< (*indices)[i] << "//" << (*indices)[i] /*i + 1*/ << " "
-					<< (*indices)[i + 1] << "//" << (*indices)[i + 1] /*i + 1*/ << " "
-					<< (*indices)[i + 2] << "//" << (*indices)[i + 2] /*i + 1*/ << "\n";
-				fileOut << "# " << i + 1 << "\n";
+				fileOut << "f "
+					<< (*indices)[i] << " "
+					<< (*indices)[i + 1] << " "
+					<< (*indices)[i + 2] << "\n";
 				mtlNumber += mtlIncrement;
 			}
-
-			fileOut << "\n";
 		}
 	}
 

@@ -51,6 +51,7 @@ namespace SpatialMapping
 		void CreateDeviceDependentResources(ID3D11Device* device);
 		void ReleaseVertexResources();
 		void ReleaseDeviceDependentResources();
+		void Reset();
 
 #ifdef USE_32BIT_INDICES
 		using IndexFormat = uint32_t;
@@ -62,7 +63,7 @@ namespace SpatialMapping
 		const Windows::Foundation::DateTime& LastUpdateTime() const { return m_lastUpdateTime; }
 		const std::vector<Windows::Foundation::Numerics::float3>* GetExportPositions() const { return &m_exportPositions; }
 		const std::vector<IndexFormat>* GetExportIndices() const { return &m_exportIndices; }
-		const std::vector<Windows::Foundation::Numerics::float3>* GetExportNormals() const { return &m_exportNormals; }
+		//const std::vector<Windows::Foundation::Numerics::float3>* GetExportNormals() const { return &m_exportNormals; }
 		const SurfaceMeshProperties* GetSurfaceMeshProperties() const { return &m_meshProperties; }
 		int ID() const { return m_id; }
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexPositions() const { return m_vertexPositions; }
@@ -97,7 +98,7 @@ namespace SpatialMapping
 		Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ m_surfaceMesh = nullptr;
 
 		std::vector<float3> m_exportPositions;
-		std::vector<float3> m_exportNormals;
+		//std::vector<float3> m_exportNormals;
 		std::vector<IndexFormat> m_exportIndices;
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexPositions;
