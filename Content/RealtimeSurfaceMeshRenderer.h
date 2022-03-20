@@ -59,6 +59,7 @@ namespace SpatialMapping
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>       m_lightingPixelShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>       m_colorPixelShader;
 
+		// #TODO Implement as unordered map (use HashCode() as key or implement custom hash?)
 		std::map<Platform::Guid, SurfaceMesh> m_meshCollection;
 
 		// A way to lock map access.

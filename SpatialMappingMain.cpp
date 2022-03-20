@@ -416,7 +416,6 @@ bool SpatialMappingMain::Render(
 
 void SpatialMappingMain::SaveAppState()
 {
-#ifdef EXPORT_MESH
 	String^ folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
 	std::wstring folderW(folder->Begin());
 	std::string folderA(folderW.begin(), folderW.end());
@@ -431,48 +430,50 @@ void SpatialMappingMain::SaveAppState()
 
 	auto const meshMap = m_meshRenderer->MeshCollection();
 
+	int index_base_offset = 0;
+
 	for (auto const& [guid, mesh] : *meshMap) {
 		if (!mesh.Expired()) {
 			auto const positions = mesh.GetExportPositions();
-			//auto const normals = mesh.GetExportNormals();
+			auto const normals = mesh.GetExportNormals();
 			auto const indices = mesh.GetExportIndices();
-
 			auto const id = mesh.ID();
-			auto const updateTime = mesh.LastUpdateTime().UniversalTime;
-			auto const activeTime = mesh.LastActiveTime();
 
 			fileOut << "o mesh_" << id << "\n";
-			fileOut << "# Timestamp update: " << updateTime << "\n";
-			fileOut << "# Timestamp active: " << activeTime << "\n";
 
+			fileOut << "# Number of vertices: " << (*positions).size() << "\n";
 			for (auto const& p : *positions) {
 				fileOut << "v " << p.x << " " << p.y << " " << p.z << "\n";
 			}
 
-			fileOut << "s off\n";
+			fileOut << "# Number of normals: " << (*normals).size() << "\n";
+			for (auto const& n : *normals) {
+				fileOut << "vn " << n.x << " " << n.y << " " << n.z << "\n";
+			}
 
-			//for (auto const& n : *normals) {
-			//	fileOut << "vn " << n.x << " " << n.y << " " << n.z << "\n";
-			//}
+			fileOut << "s off\n";
 
 			float const noFaces = (*indices).size() / 3.f;
 			float const mtlIncrement = 1000.f / noFaces;
 			float mtlNumber = 1.f;
 
+			fileOut << "# Number of faces: " << (int)noFaces << "\n";
 			for (int i = 0; i < (*indices).size(); i += 3) {
 				fileOut << "usemtl Material." << std::setw(4) << std::setfill('0') << (int)std::floor(mtlNumber) << "\n";
 
-				fileOut << "f "
-					<< (*indices)[i] << " "
-					<< (*indices)[i + 1] << " "
-					<< (*indices)[i + 2] << "\n";
+				int const i1 = (*indices)[i] + index_base_offset;
+				int const i2 = (*indices)[i + 1] + index_base_offset;
+				int const i3 = (*indices)[i + 2] + index_base_offset;
+
+				fileOut << "f " << i3 << "//" << i3 << " " << i2 << "//" << i2 << " " << i1 << "//" << i1 << "\n";
 				mtlNumber += mtlIncrement;
 			}
+
+			index_base_offset += (*positions).size();
 		}
 	}
 
 	fileOut.close();
-#endif
 }
 
 void SpatialMappingMain::LoadAppState()

@@ -278,15 +278,13 @@ void SurfaceMesh::UpdateVertexResources(
 
 				if (meshCoordSysToWorld && worldCoordSysToMesh) {
 					XMSHORTN4* const positionData = GetDataFromIBuffer<XMSHORTN4>(positions);
-					//XMBYTEN4* const normalData = GetDataFromIBuffer<XMBYTEN4>(normals);
+					XMBYTEN4* const normalData = GetDataFromIBuffer<XMBYTEN4>(normals);
 					IndexFormat* const indexData = GetDataFromIBuffer<IndexFormat>(indices);
 
-					if (positionData != nullptr /*&& normalData != nullptr*/ && indexData != nullptr) {
-#ifdef EXPORT_MESH				
+					if (positionData != nullptr && normalData != nullptr && indexData != nullptr) {
 						m_id = surfaceMesh->GetHashCode();
 
 						m_exportPositions.clear();
-#endif
 						float3 const pScale = surfaceMesh->VertexPositionScale;
 
 						for (int i = 0; i < surfaceMesh->VertexPositions->ElementCount; i++)
@@ -300,10 +298,8 @@ void SurfaceMesh::UpdateVertexResources(
 							float3 const pScaled = float3(p.x * pScale.x, p.y * pScale.y, p.z * pScale.z);
 							float3 pMeshToWorld = transform(pScaled, meshCoordSysToWorld->Value);
 
-#ifdef EXPORT_MESH
 							// Cache for export
 							m_exportPositions.push_back(pMeshToWorld);
-#endif
 
 							// Insert back into app
 							//float3 const pWorldToMesh = transform(pMeshToWorld, worldCoordSysToMesh->Value);
@@ -316,16 +312,15 @@ void SurfaceMesh::UpdateVertexResources(
 							//positionData[i] = pUpdated;
 						}
 
-#ifdef EXPORT_MESH
-						//m_exportNormals.clear();
+						m_exportNormals.clear();
 
-						//for (int i = 0; i < surfaceMesh->VertexNormals->ElementCount; i++) {
-						//	XMFLOAT4 n;
-						//	XMVECTOR const vec = XMLoadByteN4(&normalData[i]);
-						//	XMStoreFloat4(&n, vec);
-
-						//	m_exportNormals.emplace_back(n.x, n.y, n.z);
-						//}
+						for (int i = 0; i < surfaceMesh->VertexNormals->ElementCount; i++) {
+							XMFLOAT4 n;
+							XMVECTOR const vec = XMLoadByteN4(&normalData[i]);
+							XMStoreFloat4(&n, vec);
+							
+							m_exportNormals.emplace_back(n.x, n.y, n.z);
+						}
 
 						m_exportIndices.clear();
 
@@ -334,7 +329,6 @@ void SurfaceMesh::UpdateVertexResources(
 							// +1 to get .obj format
 							m_exportIndices.emplace_back(indexData[i] + 1);
 						}
-#endif
 					}
 				}
 

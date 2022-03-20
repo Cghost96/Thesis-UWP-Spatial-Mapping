@@ -113,12 +113,6 @@ Concurrency::task<void> RealtimeSurfaceMeshRenderer::AddOrUpdateSurfaceAsync(Gui
 					surfaceMesh.UpdateSurface(mesh);
 					surfaceMesh.IsActive(true);
 				}
-				else {
-					surfaceMesh.Reset();
-					surfaceMesh.UpdateSurface(mesh);
-					surfaceMesh.IsActive(true);
-					surfaceMesh.Expired(false);
-				}
 			}
 		}, task_continuation_context::use_current());
 
