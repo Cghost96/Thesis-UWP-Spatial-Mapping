@@ -108,8 +108,8 @@ Concurrency::task<void> SpatialMapping::RealtimeSurfaceMeshRenderer::AddOrUpdate
 			if (mesh != nullptr)
 			{
 				std::lock_guard<std::mutex> guard(m_meshCollectionLock);
-				
-				SurfaceMesh& surfaceMesh = m_meshCollection[id];
+
+				auto& surfaceMesh = m_meshCollection[id];
 				if (!surfaceMesh.Expired()) {
 					surfaceMesh.UpdateSurface(mesh);
 					surfaceMesh.IsActive(true);
@@ -120,7 +120,7 @@ Concurrency::task<void> SpatialMapping::RealtimeSurfaceMeshRenderer::AddOrUpdate
 	return processMeshTask;
 }
 
-void RealtimeSurfaceMeshRenderer::HideInactiveMeshes(std::unordered_map<int, Guid> const& ids, IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection)
+void RealtimeSurfaceMeshRenderer::HideInactiveMeshes(std::unordered_map<int, Guid> const& observedIDs, IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection)
 {
 	std::lock_guard<std::mutex> guard(m_meshCollectionLock);
 
@@ -130,7 +130,15 @@ void RealtimeSurfaceMeshRenderer::HideInactiveMeshes(std::unordered_map<int, Gui
 		const auto& id = pair.first;
 		auto& surfaceMesh = pair.second;
 
-		surfaceMesh.IsActive(surfaceCollection->HasKey(ids.at(id)));
+		try
+		{
+			observedIDs.at(id);
+			surfaceMesh.IsActive(true);
+		}
+		catch (const std::out_of_range& e)
+		{
+			surfaceMesh.IsActive(false);
+		}
 	};
 }
 

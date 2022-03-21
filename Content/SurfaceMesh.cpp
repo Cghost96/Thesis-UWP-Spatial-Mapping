@@ -39,8 +39,7 @@ using namespace Windows::Graphics::DirectX;
 using namespace Platform;
 
 
-SurfaceMesh::SurfaceMesh()
-{
+SurfaceMesh::SurfaceMesh() {
 	std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
 
 	ReleaseDeviceDependentResources();
@@ -278,13 +277,11 @@ void SurfaceMesh::UpdateVertexResources(
 
 				if (meshCoordSysToWorld && worldCoordSysToMesh) {
 					XMSHORTN4* const positionData = GetDataFromIBuffer<XMSHORTN4>(positions);
-					XMBYTEN4* const normalData = GetDataFromIBuffer<XMBYTEN4>(normals);
 					IndexFormat* const indexData = GetDataFromIBuffer<IndexFormat>(indices);
 
-					if (positionData != nullptr && normalData != nullptr && indexData != nullptr) {
-						m_id = surfaceMesh->GetHashCode();
+					if (positionData != nullptr && indexData != nullptr) {
 
-						m_exportPositions.clear();
+						m_positions.clear();
 						float3 const pScale = surfaceMesh->VertexPositionScale;
 
 						for (int i = 0; i < surfaceMesh->VertexPositions->ElementCount; i++)
@@ -296,10 +293,10 @@ void SurfaceMesh::UpdateVertexResources(
 
 							// Scale/transform
 							float3 const pScaled = float3(p.x * pScale.x, p.y * pScale.y, p.z * pScale.z);
-							float3 pMeshToWorld = transform(pScaled, meshCoordSysToWorld->Value);
+							float3 const pMeshToWorld = transform(pScaled, meshCoordSysToWorld->Value);
 
 							// Cache for export
-							m_exportPositions.push_back(pMeshToWorld);
+							m_positions.push_back(pMeshToWorld);
 
 							// Insert back into app
 							//float3 const pWorldToMesh = transform(pMeshToWorld, worldCoordSysToMesh->Value);
@@ -312,22 +309,32 @@ void SurfaceMesh::UpdateVertexResources(
 							//positionData[i] = pUpdated;
 						}
 
-						m_exportNormals.clear();
+						m_indices.clear();
 
-						for (int i = 0; i < surfaceMesh->VertexNormals->ElementCount; i++) {
-							XMFLOAT4 n;
-							XMVECTOR const vec = XMLoadByteN4(&normalData[i]);
-							XMStoreFloat4(&n, vec);
-							
-							m_exportNormals.emplace_back(n.x, n.y, n.z);
+						for (int i = 0; i < surfaceMesh->TriangleIndices->ElementCount; i += 3)
+						{
+							// Reverse index order
+							m_indices.emplace_back(indexData[i + 2]);
+							m_indices.emplace_back(indexData[i + 1]);
+							m_indices.emplace_back(indexData[i]);
 						}
 
-						m_exportIndices.clear();
+						m_faceNormals.clear();
 
-						for (int i = 0; i < surfaceMesh->TriangleIndices->ElementCount; i++)
-						{
-							// +1 to get .obj format
-							m_exportIndices.emplace_back(indexData[i] + 1);
+						auto crossProduct = [](float3 const& edge1, float3 const& edge2) -> float3 {
+							// #TODO remember normalization
+						};
+
+						for (int i = 0; i < m_indices.size(); i += 3) {
+							auto const& v1 = m_positions[m_indices[i]];
+							auto const& v2 = m_positions[m_indices[i + 1]];
+							auto const& v3 = m_positions[m_indices[i + 2]];
+
+							float3 const edge1(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
+							float3 const edge2(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z);
+							float3 const normal(crossProduct(edge1, edge2));
+
+							m_faceNormals.push_back(normal);
 						}
 					}
 				}
@@ -347,9 +354,9 @@ void SurfaceMesh::UpdateVertexResources(
 				{
 					// Prepare to swap in the new meshes.
 					// Here, we use ComPtr.Swap() to avoid unnecessary overhead from ref counting.
-					m_updatedVertexPositions.Swap(updatedVertexPositions);
-					m_updatedVertexNormals.Swap(updatedVertexNormals);
-					m_updatedTriangleIndices.Swap(updatedTriangleIndices);
+					m_updatedVertexPositionsBuffer.Swap(updatedVertexPositions);
+					m_updatedVertexNormalsBuffer.Swap(updatedVertexNormals);
+					m_updatedTriangleIndicesBuffer.Swap(updatedTriangleIndices);
 
 					// Cache properties
 					m_updatedMeshProperties.localCoordSystem = surfaceMesh->CoordinateSystem;
@@ -404,17 +411,17 @@ void SurfaceMesh::SwapVertexBuffers()
 {
 	// Swap out the previous vertex position, normal, and index buffers, and replace
 	// them with up-to-date buffers.
-	m_vertexPositions = m_updatedVertexPositions;
-	m_vertexNormals = m_updatedVertexNormals;
-	m_triangleIndices = m_updatedTriangleIndices;
+	m_vertexPositionsBuffer = m_updatedVertexPositionsBuffer;
+	m_vertexNormalsBuffer = m_updatedVertexNormalsBuffer;
+	m_triangleIndicesBuffer = m_updatedTriangleIndicesBuffer;
 
 	// Swap out the metadata: index count, index format, .
 	m_meshProperties = m_updatedMeshProperties;
 
 	m_updatedMeshProperties = {};
-	m_updatedVertexPositions.Reset();
-	m_updatedVertexNormals.Reset();
-	m_updatedTriangleIndices.Reset();
+	m_updatedVertexPositionsBuffer.Reset();
+	m_updatedVertexNormalsBuffer.Reset();
+	m_updatedTriangleIndicesBuffer.Reset();
 }
 
 void SurfaceMesh::ReleaseDeviceDependentResources()
@@ -428,8 +435,9 @@ void SurfaceMesh::ReleaseDeviceDependentResources()
 	// Clear out active resources.
 	ReleaseVertexResources();
 
-	m_exportPositions.clear();
-	m_exportIndices.clear();
+	m_positions.clear();
+	m_faceNormals.clear();
+	m_indices.clear();
 
 	m_modelTransformBuffer.Reset();
 

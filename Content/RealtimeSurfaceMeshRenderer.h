@@ -41,7 +41,7 @@ namespace SpatialMapping
 		Windows::Foundation::DateTime LastUpdateTime(int const id);
 
 		void HideInactiveMeshes(
-			std::unordered_map<int, Platform::Guid> const& ids,
+			std::unordered_map<int, Platform::Guid> const& observedIDs,
 			Windows::Foundation::Collections::IMapView<Platform::Guid,
 			Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^>^ const& surfaceCollection);
 

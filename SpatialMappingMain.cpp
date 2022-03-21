@@ -156,7 +156,7 @@ void SpatialMappingMain::OnSurfacesChanged(
 	Object^ args)
 {
 	IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection = sender->GetObservedSurfaces();
-	std::unordered_map<int, Guid> ids;
+	std::unordered_map<int, Guid> observedIDs;
 
 	// Process surface adds and updates.
 	for (auto& const pair : surfaceCollection)
@@ -164,7 +164,7 @@ void SpatialMappingMain::OnSurfacesChanged(
 
 		auto guid = pair->Key;
 		auto const id = guid.GetHashCode();
-		ids[id] = guid;
+		observedIDs[id] = guid;
 
 		auto surfaceInfo = pair->Value;
 
@@ -188,7 +188,7 @@ void SpatialMappingMain::OnSurfacesChanged(
 	// not included in the surface collection to avoid rendering them.
 	// The system can including them in the collection again later, in which case
 	// they will no longer be hidden.
-	m_meshRenderer->HideInactiveMeshes(ids, surfaceCollection);
+	m_meshRenderer->HideInactiveMeshes(observedIDs, surfaceCollection);
 }
 
 // Updates the application state once per frame.
@@ -288,7 +288,9 @@ HolographicFrame^ SpatialMappingMain::Update()
 					// Store the ID and metadata for each surface.
 					auto guid = pair->Key;
 					auto const id = guid.GetHashCode();
+
 					auto surfaceInfo = pair->Value;
+
 					m_meshRenderer->AddSurface(id, surfaceInfo);
 				}
 
@@ -423,9 +425,9 @@ bool SpatialMappingMain::Render(
 
 void SpatialMappingMain::SaveAppState()
 {
-	String^ folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
-	std::wstring folderW(folder->Begin());
-	std::string folderA(folderW.begin(), folderW.end());
+	String^ const folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
+	std::wstring const folderW(folder->Begin());
+	std::string const folderA(folderW.begin(), folderW.end());
 	const char* charStr = folderA.c_str();
 	char file[512];
 	std::snprintf(file, 512, "%s\\meshes.obj", charStr);
@@ -439,12 +441,11 @@ void SpatialMappingMain::SaveAppState()
 
 	int index_base_offset = 0;
 
-	for (auto const& [guid, mesh] : *meshMap) {
+	for (auto const& [id, mesh] : *meshMap) {
 		if (!mesh.Expired()) {
-			auto const positions = mesh.GetExportPositions();
-			auto const normals = mesh.GetExportNormals();
-			auto const indices = mesh.GetExportIndices();
-			auto const id = mesh.ID();
+			auto const positions = mesh.Positions();
+			auto const faceNormals = mesh.FaceNormals();
+			auto const indices = mesh.Indices();
 
 			fileOut << "o mesh_" << id << "\n";
 
@@ -453,8 +454,7 @@ void SpatialMappingMain::SaveAppState()
 				fileOut << "v " << p.x << " " << p.y << " " << p.z << "\n";
 			}
 
-			fileOut << "# Number of normals: " << (*normals).size() << "\n";
-			for (auto const& n : *normals) {
+			for (auto const& n : *faceNormals) {
 				fileOut << "vn " << n.x << " " << n.y << " " << n.z << "\n";
 			}
 
@@ -468,11 +468,16 @@ void SpatialMappingMain::SaveAppState()
 			for (int i = 0; i < (*indices).size(); i += 3) {
 				fileOut << "usemtl Material." << std::setw(4) << std::setfill('0') << (int)std::floor(mtlNumber) << "\n";
 
-				int const i1 = (*indices)[i] + index_base_offset;
-				int const i2 = (*indices)[i + 1] + index_base_offset;
-				int const i3 = (*indices)[i + 2] + index_base_offset;
+				// +1 to get .obj format
+				int const i1 = (*indices)[i] + index_base_offset + 1;
+				int const i2 = (*indices)[i + 1] + index_base_offset + 1;
+				int const i3 = (*indices)[i + 2] + index_base_offset + 1;
+				int const fn_index = (i / 3) + index_base_offset + 1;
 
-				fileOut << "f " << i3 << "//" << i3 << " " << i2 << "//" << i2 << " " << i1 << "//" << i1 << "\n";
+				fileOut << "f "
+					<< i1 << "//" << fn_index << " "
+					<< i2 << "//" << fn_index << " "
+					<< i3 << "//" << fn_index << "\n";
 				mtlNumber += mtlIncrement;
 			}
 
