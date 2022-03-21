@@ -20,6 +20,7 @@
 #include <string>
 #include <fstream>
 #include <iomanip>
+#include <unordered_map>
 
 using namespace SpatialMapping;
 using namespace concurrency;
@@ -155,11 +156,16 @@ void SpatialMappingMain::OnSurfacesChanged(
 	Object^ args)
 {
 	IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection = sender->GetObservedSurfaces();
+	std::unordered_map<int, Guid> ids;
 
 	// Process surface adds and updates.
-	for (const auto& pair : surfaceCollection)
+	for (auto& const pair : surfaceCollection)
 	{
-		auto id = pair->Key;
+
+		auto guid = pair->Key;
+		auto const id = guid.GetHashCode();
+		ids[id] = guid;
+
 		auto surfaceInfo = pair->Value;
 
 		if (m_meshRenderer->HasSurface(id))
@@ -182,7 +188,7 @@ void SpatialMappingMain::OnSurfacesChanged(
 	// not included in the surface collection to avoid rendering them.
 	// The system can including them in the collection again later, in which case
 	// they will no longer be hidden.
-	m_meshRenderer->HideInactiveMeshes(surfaceCollection);
+	m_meshRenderer->HideInactiveMeshes(ids, surfaceCollection);
 }
 
 // Updates the application state once per frame.
@@ -240,7 +246,7 @@ HolographicFrame^ SpatialMappingMain::Update()
 
 	if (m_surfaceAccessAllowed)
 	{
-		SpatialBoundingVolume^ bounds = SpatialBoundingVolume::FromBox(currentCoordinateSystem, Options::BOUNDING_BOX);
+		SpatialBoundingVolume^ bounds = SpatialBoundingVolume::FromBox(currentCoordinateSystem, Settings::BOUNDING_BOX);
 
 		// If status is Allowed, we can create the surface observer.
 		if (m_surfaceObserver == nullptr)
@@ -276,12 +282,13 @@ HolographicFrame^ SpatialMappingMain::Update()
 
 				// If the surface observer was successfully created, we can initialize our
 				// collection by pulling the current data set.
-				auto mapContainingSurfaceCollection = m_surfaceObserver->GetObservedSurfaces();
-				for (auto const& pair : mapContainingSurfaceCollection)
+				IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection = m_surfaceObserver->GetObservedSurfaces();
+				for (const auto& pair : surfaceCollection)
 				{
 					// Store the ID and metadata for each surface.
-					auto const& id = pair->Key;
-					auto const& surfaceInfo = pair->Value;
+					auto guid = pair->Key;
+					auto const id = guid.GetHashCode();
+					auto surfaceInfo = pair->Value;
 					m_meshRenderer->AddSurface(id, surfaceInfo);
 				}
 

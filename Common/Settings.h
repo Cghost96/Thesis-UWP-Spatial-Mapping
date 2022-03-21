@@ -8,7 +8,7 @@ using namespace Windows::Foundation::Numerics;
 #define USE_32BIT_INDICES
 #undef USE_32BIT_INDICES
 
-namespace Options {
+namespace Settings {
 	bool const DRAW_WIREFRAME_INIT_VALUE = true;
 	double const MAX_TRIANGLES_PER_CUBIC_METER = 1000;
 	float const MAX_INACTIVE_MESH_TIME = 60.0f * 10.0f;

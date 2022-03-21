@@ -436,14 +436,3 @@ void SurfaceMesh::ReleaseDeviceDependentResources()
 	m_constantBufferCreated = false;
 	m_loadingComplete = false;
 }
-
-void SurfaceMesh::Reset()
-{
-	std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
-
-	ReleaseDeviceDependentResources();
-	m_lastUpdateTime.UniversalTime = 0;
-
-	m_id = 0;
-	m_isActive = false;
-}

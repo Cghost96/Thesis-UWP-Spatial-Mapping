@@ -14,6 +14,7 @@
 #include <DirectXPackedVector.h>
 
 #include <thread>
+#include <forward_list>
 
 #include "Common\DirectXHelper.h"
 #include "RealtimeSurfaceMeshRenderer.h"
@@ -74,7 +75,7 @@ void RealtimeSurfaceMeshRenderer::Update(
 	};
 }
 
-void RealtimeSurfaceMeshRenderer::AddSurface(Guid id, SpatialSurfaceInfo^ newSurface)
+void SpatialMapping::RealtimeSurfaceMeshRenderer::AddSurface(int const id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface)
 {
 	auto fadeInMeshTask = AddOrUpdateSurfaceAsync(id, newSurface).then([this, id]()
 		{
@@ -91,15 +92,15 @@ void RealtimeSurfaceMeshRenderer::AddSurface(Guid id, SpatialSurfaceInfo^ newSur
 		});
 }
 
-void RealtimeSurfaceMeshRenderer::UpdateSurface(Guid id, SpatialSurfaceInfo^ newSurface)
+void SpatialMapping::RealtimeSurfaceMeshRenderer::UpdateSurface(int const id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface)
 {
 	AddOrUpdateSurfaceAsync(id, newSurface);
 }
 
-Concurrency::task<void> RealtimeSurfaceMeshRenderer::AddOrUpdateSurfaceAsync(Guid id, SpatialSurfaceInfo^ newSurface)
+Concurrency::task<void> SpatialMapping::RealtimeSurfaceMeshRenderer::AddOrUpdateSurfaceAsync(int const id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface)
 {
 	auto options = ref new SpatialSurfaceMeshOptions();
-	options->IncludeVertexNormals = Options::INCLUDE_VERTEX_NORMALS;
+	options->IncludeVertexNormals = Settings::INCLUDE_VERTEX_NORMALS;
 
 	auto computeMeshTask = create_task(newSurface->TryComputeLatestMeshAsync(m_maxTrianglesPerCubicMeter, options));
 	auto processMeshTask = computeMeshTask.then([this, id](SpatialSurfaceMesh^ mesh)
@@ -107,7 +108,7 @@ Concurrency::task<void> RealtimeSurfaceMeshRenderer::AddOrUpdateSurfaceAsync(Gui
 			if (mesh != nullptr)
 			{
 				std::lock_guard<std::mutex> guard(m_meshCollectionLock);
-
+				
 				SurfaceMesh& surfaceMesh = m_meshCollection[id];
 				if (!surfaceMesh.Expired()) {
 					surfaceMesh.UpdateSurface(mesh);
@@ -119,7 +120,7 @@ Concurrency::task<void> RealtimeSurfaceMeshRenderer::AddOrUpdateSurfaceAsync(Gui
 	return processMeshTask;
 }
 
-void RealtimeSurfaceMeshRenderer::HideInactiveMeshes(IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection)
+void RealtimeSurfaceMeshRenderer::HideInactiveMeshes(std::unordered_map<int, Guid> const& ids, IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection)
 {
 	std::lock_guard<std::mutex> guard(m_meshCollectionLock);
 
@@ -129,7 +130,7 @@ void RealtimeSurfaceMeshRenderer::HideInactiveMeshes(IMapView<Guid, SpatialSurfa
 		const auto& id = pair.first;
 		auto& surfaceMesh = pair.second;
 
-		surfaceMesh.IsActive(surfaceCollection->HasKey(id));
+		surfaceMesh.IsActive(surfaceCollection->HasKey(ids.at(id)));
 	};
 }
 
@@ -352,13 +353,13 @@ void RealtimeSurfaceMeshRenderer::ReleaseDeviceDependentResources()
 	}
 }
 
-bool RealtimeSurfaceMeshRenderer::HasSurface(Platform::Guid id)
+bool SpatialMapping::RealtimeSurfaceMeshRenderer::HasSurface(int const id)
 {
 	std::lock_guard<std::mutex> guard(m_meshCollectionLock);
 	return m_meshCollection.find(id) != m_meshCollection.end();
 }
 
-Windows::Foundation::DateTime RealtimeSurfaceMeshRenderer::LastUpdateTime(Platform::Guid id)
+Windows::Foundation::DateTime SpatialMapping::RealtimeSurfaceMeshRenderer::LastUpdateTime(int const id)
 {
 	std::lock_guard<std::mutex> guard(m_meshCollectionLock);
 	auto& meshIter = m_meshCollection.find(id);

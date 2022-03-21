@@ -51,7 +51,6 @@ namespace SpatialMapping
 		void CreateDeviceDependentResources(ID3D11Device* device);
 		void ReleaseVertexResources();
 		void ReleaseDeviceDependentResources();
-		void Reset();
 
 #ifdef USE_32BIT_INDICES
 		using IndexFormat = uint32_t;

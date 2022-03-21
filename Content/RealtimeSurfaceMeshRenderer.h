@@ -17,7 +17,7 @@
 #include "Content\ShaderStructures.h"
 
 #include <memory>
-#include <map>
+#include <unordered_map>
 #include <ppltasks.h>
 
 namespace SpatialMapping
@@ -34,20 +34,21 @@ namespace SpatialMapping
 		);
 		void Render(bool isStereo, bool useWireframe);
 
-		bool HasSurface(Platform::Guid id);
-		void AddSurface(Platform::Guid id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
-		void UpdateSurface(Platform::Guid id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
+		bool HasSurface(int const id);
+		void AddSurface(int const id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
+		void UpdateSurface(int const id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
 
-		Windows::Foundation::DateTime LastUpdateTime(Platform::Guid id);
+		Windows::Foundation::DateTime LastUpdateTime(int const id);
 
 		void HideInactiveMeshes(
+			std::unordered_map<int, Platform::Guid> const& ids,
 			Windows::Foundation::Collections::IMapView<Platform::Guid,
 			Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^>^ const& surfaceCollection);
 
-		std::map<Platform::Guid, SpatialMapping::SurfaceMesh>* MeshCollection() { return &m_meshCollection; }
+		std::unordered_map<int, SpatialMapping::SurfaceMesh>* MeshCollection() { return &m_meshCollection; }
 
 	private:
-		Concurrency::task<void> AddOrUpdateSurfaceAsync(Platform::Guid id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
+		Concurrency::task<void> AddOrUpdateSurfaceAsync(int const id, Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^ newSurface);
 
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources>            m_deviceResources;
@@ -59,14 +60,13 @@ namespace SpatialMapping
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>       m_lightingPixelShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>       m_colorPixelShader;
 
-		// #TODO Implement as unordered map (use HashCode() as key or implement custom hash?)
-		std::map<Platform::Guid, SurfaceMesh> m_meshCollection;
+		std::unordered_map<int, SurfaceMesh> m_meshCollection;
 
 		// A way to lock map access.
 		std::mutex                                      m_meshCollectionLock;
 
 		// Level of detail setting. The number of triangles that the system is allowed to provide per cubic meter.
-		double const                                    m_maxTrianglesPerCubicMeter = Options::MAX_TRIANGLES_PER_CUBIC_METER;
+		double const                                    m_maxTrianglesPerCubicMeter = Settings::MAX_TRIANGLES_PER_CUBIC_METER;
 
 		// If the current D3D Device supports VPRT, we can avoid using a geometry
 		// shader just to set the render target array index.
@@ -77,10 +77,10 @@ namespace SpatialMapping
 		Microsoft::WRL::ComPtr<ID3D11RasterizerState>   m_wireframeRasterizerState;
 
 		// The duration of time, in seconds, a mesh is allowed to remain inactive before deletion.
-		const float m_maxInactiveMeshTime = Options::MAX_INACTIVE_MESH_TIME;
+		const float m_maxInactiveMeshTime = Settings::MAX_INACTIVE_MESH_TIME;
 
 		// The duration of time, in seconds, taken for a new surface mesh to fade in on-screen.
-		const float m_surfaceMeshFadeInTime = Options::MESH_FADE_IN_TIME;
+		const float m_surfaceMeshFadeInTime = Settings::MESH_FADE_IN_TIME;
 
 		bool m_loadingComplete;
 	};
