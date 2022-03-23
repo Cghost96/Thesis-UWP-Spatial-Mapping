@@ -45,6 +45,7 @@ dlldata.c
 *.ilk
 *.meta
 #*.obj
+*.blend
 *.pch
 *.pdb
 *.pgc
