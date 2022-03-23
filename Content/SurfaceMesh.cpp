@@ -268,7 +268,7 @@ void SurfaceMesh::UpdateVertexResources(
 				std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
 
 				IBuffer^ positions = surfaceMesh->VertexPositions->Data;
-				IBuffer^ normals = surfaceMesh->VertexNormals->Data;
+				IBuffer^ const v_normals = surfaceMesh->VertexNormals->Data;
 				IBuffer^ indices = surfaceMesh->TriangleIndices->Data;
 
 				SpatialCoordinateSystem^ const meshCoordSys = surfaceMesh->CoordinateSystem;
@@ -291,11 +291,11 @@ void SurfaceMesh::UpdateVertexResources(
 							XMVECTOR const vec = XMLoadShortN4(&positionData[i]);
 							XMStoreFloat4(&p, vec);
 
-							// Scale/transform
+							// Scale and transform
 							float3 const pScaled = float3(p.x * pScale.x, p.y * pScale.y, p.z * pScale.z);
 							float3 const pMeshToWorld = transform(pScaled, meshCoordSysToWorld->Value);
 
-							// Cache for export
+							// Cache
 							m_positions.push_back(pMeshToWorld);
 
 							// Insert back into app
@@ -321,8 +321,17 @@ void SurfaceMesh::UpdateVertexResources(
 
 						m_faceNormals.clear();
 
-						auto crossProduct = [](float3 const& edge1, float3 const& edge2) -> float3 {
-							// #TODO remember normalization
+						auto crossProduct = [](float3 const& v1, float3 const& v2) -> float3 {
+							return float3(
+								v1.y * v2.z - v1.z * v2.y,
+								v1.x * v2.z - v1.z * v2.x,
+								v1.x * v2.y - v1.y * v2.x
+							);
+						};
+
+						auto normalize = [](float3 const& v) -> float3 {
+							auto const l = std::sqrt(std::pow(v.x, 2) + std::pow(v.y, 2) + std::pow(v.z, 2));
+							return float3(v.x / l, v.y / l, v.z / l);
 						};
 
 						for (int i = 0; i < m_indices.size(); i += 3) {
@@ -332,7 +341,7 @@ void SurfaceMesh::UpdateVertexResources(
 
 							float3 const edge1(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
 							float3 const edge2(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z);
-							float3 const normal(crossProduct(edge1, edge2));
+							float3 const normal(normalize(crossProduct(edge1, edge2)));
 
 							m_faceNormals.push_back(normal);
 						}
@@ -345,11 +354,11 @@ void SurfaceMesh::UpdateVertexResources(
 				Microsoft::WRL::ComPtr<ID3D11Buffer> updatedTriangleIndices;
 
 				CreateDirectXBuffer(device, D3D11_BIND_VERTEX_BUFFER, positions, updatedVertexPositions.GetAddressOf());
-				CreateDirectXBuffer(device, D3D11_BIND_VERTEX_BUFFER, normals, updatedVertexNormals.GetAddressOf());
+				CreateDirectXBuffer(device, D3D11_BIND_VERTEX_BUFFER, v_normals, updatedVertexNormals.GetAddressOf());
 				CreateDirectXBuffer(device, D3D11_BIND_INDEX_BUFFER, indices, updatedTriangleIndices.GetAddressOf());
 
 				// Before updating the meshes, check to ensure that there wasn't a more recent update.
-				auto meshUpdateTime = surfaceMesh->SurfaceInfo->UpdateTime;
+				auto const meshUpdateTime = surfaceMesh->SurfaceInfo->UpdateTime;
 				if (meshUpdateTime.UniversalTime > m_lastUpdateTime.UniversalTime)
 				{
 					// Prepare to swap in the new meshes.

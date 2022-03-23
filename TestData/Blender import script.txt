@@ -2,7 +2,7 @@ import os
 import bpy
 
 # put the location to the folder where the objs are located here in this fashion
-# this line will only work on windows ie C:\objects
+# this line will only work on windows
 path_to_obj_dir = os.path.join('C:\\Dev\\Skole\\SpatialMapping\\Python\\', 'Split')
 
 # get list of all files in directory

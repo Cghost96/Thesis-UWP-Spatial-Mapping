@@ -472,12 +472,13 @@ void SpatialMappingMain::SaveAppState()
 				int const i1 = (*indices)[i] + index_base_offset + 1;
 				int const i2 = (*indices)[i + 1] + index_base_offset + 1;
 				int const i3 = (*indices)[i + 2] + index_base_offset + 1;
-				int const fn_index = (i / 3) + index_base_offset + 1;
+				int const n_index = (i / 3) + index_base_offset + 1;
 
-				fileOut << "f "
-					<< i1 << "//" << fn_index << " "
-					<< i2 << "//" << fn_index << " "
-					<< i3 << "//" << fn_index << "\n";
+				fileOut 
+					<< "f "
+					<< i1 << "//" << n_index << " "
+					<< i2 << "//" << n_index << " "
+					<< i3 << "//" << n_index << "\n";
 				mtlNumber += mtlIncrement;
 			}
 
