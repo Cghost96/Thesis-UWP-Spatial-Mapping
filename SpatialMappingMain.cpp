@@ -158,6 +158,7 @@ void SpatialMappingMain::OnSurfacesChanged(
 	IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection = sender->GetObservedSurfaces();
 	std::unordered_map<int, Guid> observedIDs;
 
+
 	// Process surface adds and updates.
 	for (auto& const pair : surfaceCollection)
 	{
@@ -271,7 +272,7 @@ HolographicFrame^ SpatialMappingMain::Update()
 			if (supportedTriangleIndexFormats->IndexOf(DirectXPixelFormat::R32UInt, &formatIndex))
 			{
 				m_surfaceMeshOptions->TriangleIndexFormat = DirectXPixelFormat::R32UInt;
-			}
+		}
 #endif
 
 			// Create the observer.
@@ -294,17 +295,19 @@ HolographicFrame^ SpatialMappingMain::Update()
 					m_meshRenderer->AddSurface(id, surfaceInfo);
 				}
 
-				// We then subscribe to an event to receive up-to-date data.
-				m_surfacesChangedToken = m_surfaceObserver->ObservedSurfacesChanged +=
-					ref new TypedEventHandler<SpatialSurfaceObserver^, Platform::Object^>(
-						bind(&SpatialMappingMain::OnSurfacesChanged, this, _1, _2)
-						);
+				if (!Settings::MOCK_IMPROVEMENT) {
+					// We then subscribe to an event to receive up-to-date data.
+					m_surfacesChangedToken = m_surfaceObserver->ObservedSurfacesChanged +=
+						ref new TypedEventHandler<SpatialSurfaceObserver^, Platform::Object^>(
+							bind(&SpatialMappingMain::OnSurfacesChanged, this, _1, _2)
+							);
+				}
 			}
-		}
+	}
 
 		// Keep the surface observer positioned at the device's location.
 		m_surfaceObserver->SetBoundingVolume(bounds);
-	}
+}
 
 	// Check for new input state since the last frame.
 	SpatialInteractionSourceState^ pointerState = m_spatialInputHandler->CheckForInput();
@@ -474,7 +477,7 @@ void SpatialMappingMain::SaveAppState()
 				int const i3 = (*indices)[i + 2] + index_base_offset + 1;
 				int const n_index = (i / 3) + index_base_offset + 1;
 
-				fileOut 
+				fileOut
 					<< "f "
 					<< i1 << "//" << n_index << " "
 					<< i2 << "//" << n_index << " "

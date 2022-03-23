@@ -12,6 +12,7 @@
 #include "pch.h"
 #include "AppView.h"
 #include "Common/Helper.h"
+#include "Common/Settings.h"
 #include "Content/SurfaceMesh.h"
 
 #include <filesystem>

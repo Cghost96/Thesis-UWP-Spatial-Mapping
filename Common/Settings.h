@@ -22,4 +22,6 @@ namespace Settings {
 			{0.f, 0.f, 0.f}, // At device-position
 			{3.f, 3.f, 5.f}
 	};
+
+	bool const MOCK_IMPROVEMENT = true;
 }

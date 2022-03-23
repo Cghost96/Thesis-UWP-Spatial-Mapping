@@ -235,6 +235,10 @@ void SurfaceMesh::Draw(
 		0,                  // Base vertex location.
 		0                   // Start instance location.
 	);
+
+	if (Settings::MOCK_IMPROVEMENT) {
+		m_isActive = false;
+	}
 }
 
 void SurfaceMesh::CreateDirectXBuffer(
