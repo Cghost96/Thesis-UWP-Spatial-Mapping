@@ -320,7 +320,7 @@ HolographicFrame^ SpatialMappingMain::Update()
 
 				break;
 			case SpatialInteractionSourceHandedness::Right:
-				m_drawWirfeFrame = !m_drawWirfeFrame;
+				m_drawWireFrame = !m_drawWireFrame;
 				break;
 			default:
 				break;
@@ -393,7 +393,7 @@ bool SpatialMappingMain::Render(
 				if (cameraActive)
 				{
 					// Draw the sample hologram.
-					m_meshRenderer->Render(pCameraResources->IsRenderingStereoscopic(), m_drawWirfeFrame);
+					m_meshRenderer->Render(pCameraResources->IsRenderingStereoscopic(), m_drawWireFrame);
 
 					// On versions of the platform that support the CommitDirect3D11DepthBuffer API, we can 
 					// provide the depth buffer to the system, and it will use depth information to stabilize 

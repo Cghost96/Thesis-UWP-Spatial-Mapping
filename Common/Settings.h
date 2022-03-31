@@ -10,8 +10,10 @@ using namespace Windows::Foundation::Numerics;
 
 namespace Settings {
 	bool const DRAW_WIREFRAME_INIT_VALUE = true;
-	double const TRI_PER_M3_3500 = 3500;
-	float const RES_3500 = 60.0f * 10.0f;
+	double const RES_2500 = 2500;
+	double const RES_3500 = 3500;
+	double const RES_4500 = 4500;
+	float const INACTIVE_MESH_TIME = 60.0f * 10.0f;
 	float const MESH_FADE_IN_TIME = 1.5f;
 	bool const INCLUDE_VERTEX_NORMALS = true;
 
