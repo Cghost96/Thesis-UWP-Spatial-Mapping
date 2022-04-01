@@ -53,10 +53,9 @@ SurfaceMesh::~SurfaceMesh()
 	ReleaseDeviceDependentResources();
 }
 
-void SurfaceMesh::UpdateSurface(
-	SpatialSurfaceMesh^ surfaceMesh)
+void SurfaceMesh::UpdateSurfaces(std::shared_ptr<std::unordered_map<double, SpatialSurfaceMesh^>> meshes)
 {
-	m_pendingSurfaceMesh = surfaceMesh;
+	m_pendingMeshes = meshes;
 }
 
 // Spatial Mapping surface meshes each have a transform. This transform is updated every frame.
@@ -253,42 +252,55 @@ void SurfaceMesh::CreateDirectXBuffer(
 }
 
 void SurfaceMesh::UpdateVertexResources(
-	ID3D11Device* device, Windows::Perception::Spatial::SpatialCoordinateSystem^ worldCoordSystem = nullptr)
+	ID3D11Device* device, SpatialCoordinateSystem^ worldCoordSystem = nullptr)
 {
 	if (!m_isExpired && !m_isShuttingDown && worldCoordSystem != nullptr) {
 
-		SpatialSurfaceMesh^ surfaceMesh = std::move(m_pendingSurfaceMesh);
-		if (!surfaceMesh || surfaceMesh->TriangleIndices->ElementCount < 3)
+		auto& meshes = std::move(m_pendingMeshes);
+		if (!meshes || meshes->at(Settings::RES_LOW)->TriangleIndices->ElementCount < 3)
 		{
-			// Not enough indices to draw a triangle or there is no pending mesh.
+			// Not enough indices to draw a triangle or there are no pending meshes.
 			return;
 		}
 
 		// Surface mesh resources are created off-thread, so that they don't affect rendering latency.
-		m_updateVertexResourcesTask.then([this, device, surfaceMesh, worldCoordSystem]()
+		m_updateVertexResourcesTask.then([this, device, meshes, worldCoordSystem]()
 			{
 				// Create new Direct3D device resources for the updated buffers. These will be set aside
 				// for now, and then swapped into the active slot next time the render loop is ready to draw.
 				std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
 
-				IBuffer^ positions = surfaceMesh->VertexPositions->Data;
-				IBuffer^ const v_normals = surfaceMesh->VertexNormals->Data;
-				IBuffer^ indices = surfaceMesh->TriangleIndices->Data;
+				IBuffer^ lowResPositions = meshes->at(Settings::RES_LOW)->VertexPositions->Data;
+				IBuffer^ medResPositions = meshes->at(Settings::RES_MED)->VertexPositions->Data;
+				IBuffer^ highResPositions = meshes->at(Settings::RES_HIGH)->VertexPositions->Data;
 
-				SpatialCoordinateSystem^ const meshCoordSys = surfaceMesh->CoordinateSystem;
-				IBox<float4x4>^ const meshCoordSysToWorld = meshCoordSys->TryGetTransformTo(worldCoordSystem);
-				IBox<float4x4>^ const worldCoordSysToMesh = worldCoordSystem->TryGetTransformTo(meshCoordSys);
+				IBuffer^ const lowResVNormals = meshes->at(Settings::RES_LOW)->VertexNormals->Data;
+				IBuffer^ const medResVNormals = meshes->at(Settings::RES_MED)->VertexNormals->Data;
+				IBuffer^ const highResVNormals = meshes->at(Settings::RES_HIGH)->VertexNormals->Data;
 
-				if (meshCoordSysToWorld && worldCoordSysToMesh) {
-					XMSHORTN4* const positionData = GetDataFromIBuffer<XMSHORTN4>(positions);
-					IndexFormat* const indexData = GetDataFromIBuffer<IndexFormat>(indices);
+				IBuffer^ lowResIndices = meshes->at(Settings::RES_LOW)->TriangleIndices->Data;
+				IBuffer^ medResIndices = meshes->at(Settings::RES_MED)->TriangleIndices->Data;
+				IBuffer^ highResIndices = meshes->at(Settings::RES_HIGH)->TriangleIndices->Data;
+				
+				// All meshes have same coord system since the only difference is resolution
+				SpatialCoordinateSystem^ const meshCoordSys = meshes->at(Settings::RES_LOW)->CoordinateSystem;
+				IBox<float4x4>^ const transMeshToWorld = meshCoordSys->TryGetTransformTo(worldCoordSystem);
+				IBox<float4x4>^ const transWorldToMesh = worldCoordSystem->TryGetTransformTo(meshCoordSys);
+
+				if (transMeshToWorld && transWorldToMesh) {
+					auto storeData = [this, transMeshToWorld, transWorldToMesh](IBuffer^ positions, IBuffer^ indices, std::vector<float3>& posContainer, std::vector<float3>& normalsContainer, std::vector<float3>& indicesContainer) {
+					
+					};
+					
+					XMSHORTN4* const positionData = GetDataFromIBuffer<XMSHORTN4>(lowResPositions);
+					IndexFormat* const indexData = GetDataFromIBuffer<IndexFormat>(lowResIndices);
 
 					if (positionData != nullptr && indexData != nullptr) {
 
 						m_positions.clear();
-						float3 const pScale = surfaceMesh->VertexPositionScale;
+						float3 const pScale = meshes->VertexPositionScale;
 
-						for (int i = 0; i < surfaceMesh->VertexPositions->ElementCount; i++)
+						for (int i = 0; i < meshes->VertexPositions->ElementCount; i++)
 						{
 							// Extract from device
 							XMFLOAT4 p;
@@ -297,13 +309,13 @@ void SurfaceMesh::UpdateVertexResources(
 
 							// Scale and transform
 							float3 const pScaled = float3(p.x * pScale.x, p.y * pScale.y, p.z * pScale.z);
-							float3 const pMeshToWorld = transform(pScaled, meshCoordSysToWorld->Value);
+							float3 const pMeshToWorld = transform(pScaled, transMeshToWorld->Value);
 
 							// Cache
 							m_positions.push_back(pMeshToWorld);
 
 							// Insert back into app
-							//float3 const pWorldToMesh = transform(pMeshToWorld, worldCoordSysToMesh->Value);
+							//float3 const pWorldToMesh = transform(pMeshToWorld, transWorldToMesh->Value);
 							//p = { pWorldToMesh.x / pScale.x, pWorldToMesh.y / pScale.y, pWorldToMesh.z / pScale.z, p.w };
 
 							//XMSHORTN4 pUpdated;
@@ -315,7 +327,7 @@ void SurfaceMesh::UpdateVertexResources(
 
 						m_indices.clear();
 
-						for (int i = 0; i < surfaceMesh->TriangleIndices->ElementCount; i += 3)
+						for (int i = 0; i < meshes->TriangleIndices->ElementCount; i += 3)
 						{
 							// Reverse index order
 							m_indices.emplace_back(indexData[i + 2]);
@@ -357,12 +369,12 @@ void SurfaceMesh::UpdateVertexResources(
 				Microsoft::WRL::ComPtr<ID3D11Buffer> updatedVertexNormals;
 				Microsoft::WRL::ComPtr<ID3D11Buffer> updatedTriangleIndices;
 
-				CreateDirectXBuffer(device, D3D11_BIND_VERTEX_BUFFER, positions, updatedVertexPositions.GetAddressOf());
-				CreateDirectXBuffer(device, D3D11_BIND_VERTEX_BUFFER, v_normals, updatedVertexNormals.GetAddressOf());
-				CreateDirectXBuffer(device, D3D11_BIND_INDEX_BUFFER, indices, updatedTriangleIndices.GetAddressOf());
+				CreateDirectXBuffer(device, D3D11_BIND_VERTEX_BUFFER, lowResPositions, updatedVertexPositions.GetAddressOf());
+				CreateDirectXBuffer(device, D3D11_BIND_VERTEX_BUFFER, lowResVNormals, updatedVertexNormals.GetAddressOf());
+				CreateDirectXBuffer(device, D3D11_BIND_INDEX_BUFFER, lowResIndices, updatedTriangleIndices.GetAddressOf());
 
 				// Before updating the meshes, check to ensure that there wasn't a more recent update.
-				auto const meshUpdateTime = surfaceMesh->SurfaceInfo->UpdateTime;
+				auto const meshUpdateTime = meshes->at(Settings::RES_LOW)->SurfaceInfo->UpdateTime;
 				if (meshUpdateTime.UniversalTime > m_lastUpdateTime.UniversalTime)
 				{
 					// Prepare to swap in the new meshes.
@@ -372,12 +384,12 @@ void SurfaceMesh::UpdateVertexResources(
 					m_updatedTriangleIndicesBuffer.Swap(updatedTriangleIndices);
 
 					// Cache properties
-					m_updatedMeshProperties.localCoordSystem = surfaceMesh->CoordinateSystem;
-					m_updatedMeshProperties.vertexPositionScale = surfaceMesh->VertexPositionScale;
-					m_updatedMeshProperties.vertexStride = surfaceMesh->VertexPositions->Stride;
-					m_updatedMeshProperties.normalStride = surfaceMesh->VertexNormals->Stride;
-					m_updatedMeshProperties.indexCount = surfaceMesh->TriangleIndices->ElementCount;
-					m_updatedMeshProperties.indexFormat = static_cast<DXGI_FORMAT>(surfaceMesh->TriangleIndices->Format);
+					m_updatedMeshProperties.localCoordSystem = meshes->at(Settings::RES_LOW)->CoordinateSystem;
+					m_updatedMeshProperties.vertexPositionScale = meshes->at(Settings::RES_LOW)->VertexPositionScale;
+					m_updatedMeshProperties.vertexStride = meshes->at(Settings::RES_LOW)->VertexPositions->Stride;
+					m_updatedMeshProperties.normalStride = meshes->at(Settings::RES_LOW)->VertexNormals->Stride;
+					m_updatedMeshProperties.indexCount = meshes->at(Settings::RES_LOW)->TriangleIndices->ElementCount;
+					m_updatedMeshProperties.indexFormat = static_cast<DXGI_FORMAT>(meshes->at(Settings::RES_LOW)->TriangleIndices->Format);
 
 					// Send a signal to the render loop indicating that new resources are available to use.
 					m_updateReady = true;
@@ -408,11 +420,7 @@ void SurfaceMesh::CreateDeviceDependentResources(
 
 void SurfaceMesh::ReleaseVertexResources()
 {
-	if (m_surfaceMesh)
-	{
-		m_pendingSurfaceMesh = m_surfaceMesh;
-		m_surfaceMesh = nullptr;
-	}
+	m_pendingMeshes = nullptr;
 
 	m_meshProperties = {};
 	GetVertexPositions().Reset();

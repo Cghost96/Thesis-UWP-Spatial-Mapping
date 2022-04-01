@@ -183,13 +183,13 @@ void SpatialMappingMain::OnSurfacesChanged(
 			m_meshRenderer->AddSurface(id, surfaceInfo);
 		}
 	}
-
+	
 	// Sometimes, a mesh will fall outside the area that is currently visible to
 	// the surface observer. In this code sample, we "sleep" any meshes that are
 	// not included in the surface collection to avoid rendering them.
 	// The system can including them in the collection again later, in which case
 	// they will no longer be hidden.
-	m_meshRenderer->HideInactiveMeshes(observedIDs, surfaceCollection);
+	m_meshRenderer->HideInactiveSurfaces(observedIDs, surfaceCollection);
 }
 
 // Updates the application state once per frame.

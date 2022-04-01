@@ -39,7 +39,7 @@ namespace SpatialMapping
 		SurfaceMesh();
 		~SurfaceMesh();
 
-		void UpdateSurface(Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ surface);
+		void UpdateSurfaces(std::shared_ptr<std::unordered_map<double, Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^>> meshes);
 		void UpdateTransform(
 			ID3D11Device* device,
 			ID3D11DeviceContext* context,
@@ -92,8 +92,7 @@ namespace SpatialMapping
 
 		concurrency::task<void> m_updateVertexResourcesTask = concurrency::task_from_result();
 
-		Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ m_pendingSurfaceMesh = nullptr;
-		Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ m_surfaceMesh = nullptr;
+		std::shared_ptr<std::unordered_map<double, Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^>> m_pendingMeshes;
 
 		std::vector<float3> m_positions;
 		std::vector<float3> m_faceNormals;

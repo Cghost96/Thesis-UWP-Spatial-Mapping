@@ -67,7 +67,7 @@ void RealtimeSurfaceMeshRenderer::Update(
 		// Check to see if the mesh has expired.
 		float const lastActiveTime = surfaceMesh.LastActiveTime();
 		float const inactiveDuration = timeElapsed - lastActiveTime;
-		if (inactiveDuration > m_maxInactiveMeshTime)
+		if (inactiveDuration > Settings::MAX_INACTIVE_MESH_TIME)
 		{
 			surfaceMesh.Expired(true);
 			//m_meshCollection.erase(iter);
@@ -87,7 +87,7 @@ void SpatialMapping::RealtimeSurfaceMeshRenderer::AddSurface(int const id, Windo
 				// color. This allows you to observe changes in the spatial map that are due to new meshes,
 				// as opposed to mesh updates.
 				auto& surfaceMesh = m_meshCollection[id];
-				surfaceMesh.ColorFadeTimer(m_surfaceMeshFadeInTime);
+				surfaceMesh.ColorFadeTimer(Settings::MESH_FADE_IN_TIME);
 			}
 		});
 }
@@ -102,25 +102,52 @@ Concurrency::task<void> SpatialMapping::RealtimeSurfaceMeshRenderer::AddOrUpdate
 	auto options = ref new SpatialSurfaceMeshOptions();
 	options->IncludeVertexNormals = Settings::INCLUDE_VERTEX_NORMALS;
 
-	auto computeMeshTask = create_task(newSurface->TryComputeLatestMeshAsync(m_maxTrianglesPerCubicMeter, options));
-	auto processMeshTask = computeMeshTask.then([this, id](SpatialSurfaceMesh^ mesh)
+	std::unordered_map<double, SpatialSurfaceMesh^> computedMeshes;
+
+	// https://docs.microsoft.com/en-us/cpp/parallel/concrt/task-parallelism-concurrency-runtime?view=msvc-170#lambdas
+	auto optionsPtr = std::make_shared<SpatialSurfaceMeshOptions^>(options);
+	auto newSurfacePtr = std::make_shared<SpatialSurfaceInfo^>(newSurface);
+	auto computedMeshesPtr = std::make_shared<std::unordered_map<double, SpatialSurfaceMesh^ >>(computedMeshes);
+
+	auto computeMeshesTask = create_task([optionsPtr, newSurfacePtr]()
 		{
-			if (mesh != nullptr)
+			return (*newSurfacePtr)->TryComputeLatestMeshAsync(Settings::RES_LOW, *optionsPtr);
+		}).then([optionsPtr, newSurfacePtr, computedMeshesPtr](SpatialSurfaceMesh^ mesh)
 			{
-				std::lock_guard<std::mutex> guard(m_meshCollectionLock);
+				computedMeshesPtr->insert({ Settings::RES_LOW, mesh });
+				return (*newSurfacePtr)->TryComputeLatestMeshAsync(Settings::RES_MED, *optionsPtr);
+			}).then([optionsPtr, newSurfacePtr, computedMeshesPtr](SpatialSurfaceMesh^ mesh)
+				{
+					computedMeshesPtr->insert({ Settings::RES_MED, mesh });
+					return (*newSurfacePtr)->TryComputeLatestMeshAsync(Settings::RES_HIGH, *optionsPtr);
+				}).then([optionsPtr, newSurfacePtr, computedMeshesPtr](SpatialSurfaceMesh^ mesh)
+					{
+						computedMeshesPtr->insert({ Settings::RES_HIGH, mesh });
+					});
 
-				auto& surfaceMesh = m_meshCollection[id];
-				if (!surfaceMesh.Expired()) {
-					surfaceMesh.UpdateSurface(mesh);
-					surfaceMesh.IsActive(true);
-				}
-			}
-		}, task_continuation_context::use_current());
+				auto processMeshesTask = computeMeshesTask.then([this, id, computedMeshesPtr]()
+					{
+						bool const validMeshes =
+							computedMeshesPtr->at(Settings::RES_LOW) != nullptr &&
+							computedMeshesPtr->at(Settings::RES_MED) != nullptr &&
+							computedMeshesPtr->at(Settings::RES_HIGH) != nullptr;
 
-	return processMeshTask;
+						if (validMeshes)
+						{
+							std::lock_guard<std::mutex> guard(m_meshCollectionLock);
+
+							auto& surfaceMesh = m_meshCollection[id];
+							if (!surfaceMesh.Expired()) {
+								surfaceMesh.UpdateSurfaces(computedMeshesPtr);
+								surfaceMesh.IsActive(true);
+							}
+						}
+					}, task_continuation_context::use_current());
+
+				return processMeshesTask;
 }
 
-void RealtimeSurfaceMeshRenderer::HideInactiveMeshes(std::unordered_map<int, Guid> const& observedIDs, IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection)
+void RealtimeSurfaceMeshRenderer::HideInactiveSurfaces(std::unordered_map<int, Guid> const& observedIDs, IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection)
 {
 	std::lock_guard<std::mutex> guard(m_meshCollectionLock);
 
