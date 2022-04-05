@@ -21,7 +21,7 @@ using namespace Windows::Storage::Streams;
 namespace SpatialMapping
 {
 	template <typename t = byte>
-	t* GetDataFromIBuffer(Windows::Storage::Streams::IBuffer^& container)
+	t* GetDataFromIBuffer(Windows::Storage::Streams::IBuffer^ container)
 	{
 		if (container == nullptr)
 		{

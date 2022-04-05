@@ -53,7 +53,7 @@ SurfaceMesh::~SurfaceMesh()
 	ReleaseDeviceDependentResources();
 }
 
-void SurfaceMesh::UpdateSurfaces(std::shared_ptr<std::unordered_map<double, SpatialSurfaceMesh^>> meshes)
+void SurfaceMesh::UpdateSurfaces(std::unordered_map<double, SpatialSurfaceMesh^> meshes)
 {
 	m_pendingMeshes = meshes;
 }
@@ -270,104 +270,99 @@ void SurfaceMesh::UpdateVertexResources(
 				// for now, and then swapped into the active slot next time the render loop is ready to draw.
 				std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
 
-				IBuffer^ lowResPositions = meshes->at(Settings::RES_LOW)->VertexPositions->Data;
-				IBuffer^ medResPositions = meshes->at(Settings::RES_MED)->VertexPositions->Data;
-				IBuffer^ highResPositions = meshes->at(Settings::RES_HIGH)->VertexPositions->Data;
-
-				IBuffer^ const lowResVNormals = meshes->at(Settings::RES_LOW)->VertexNormals->Data;
-				IBuffer^ const medResVNormals = meshes->at(Settings::RES_MED)->VertexNormals->Data;
-				IBuffer^ const highResVNormals = meshes->at(Settings::RES_HIGH)->VertexNormals->Data;
-
-				IBuffer^ lowResIndices = meshes->at(Settings::RES_LOW)->TriangleIndices->Data;
-				IBuffer^ medResIndices = meshes->at(Settings::RES_MED)->TriangleIndices->Data;
-				IBuffer^ highResIndices = meshes->at(Settings::RES_HIGH)->TriangleIndices->Data;
-				
 				// All meshes have same coord system since the only difference is resolution
 				SpatialCoordinateSystem^ const meshCoordSys = meshes->at(Settings::RES_LOW)->CoordinateSystem;
 				IBox<float4x4>^ const transMeshToWorld = meshCoordSys->TryGetTransformTo(worldCoordSystem);
 				IBox<float4x4>^ const transWorldToMesh = worldCoordSystem->TryGetTransformTo(meshCoordSys);
 
 				if (transMeshToWorld && transWorldToMesh) {
-					auto storeData = [this, transMeshToWorld, transWorldToMesh](IBuffer^ positions, IBuffer^ indices, std::vector<float3>& posContainer, std::vector<float3>& normalsContainer, std::vector<float3>& indicesContainer) {
-					
+					auto crossProduct = [](float3 const& v1, float3 const& v2) -> float3 {
+						return float3(
+							v1.y * v2.z - v1.z * v2.y,
+							v1.x * v2.z - v1.z * v2.x,
+							v1.x * v2.y - v1.y * v2.x
+						);
 					};
-					
-					XMSHORTN4* const positionData = GetDataFromIBuffer<XMSHORTN4>(lowResPositions);
-					IndexFormat* const indexData = GetDataFromIBuffer<IndexFormat>(lowResIndices);
 
-					if (positionData != nullptr && indexData != nullptr) {
+					auto normalize = [](float3 const& v) -> float3 {
+						auto const l = std::sqrt(std::pow(v.x, 2) + std::pow(v.y, 2) + std::pow(v.z, 2));
+						return float3(v.x / l, v.y / l, v.z / l);
+					};
 
-						m_positions.clear();
-						float3 const pScale = meshes->VertexPositionScale;
+					auto storeData = [this, &meshes, &transMeshToWorld, &transWorldToMesh, &crossProduct, &normalize](double const res) {
 
-						for (int i = 0; i < meshes->VertexPositions->ElementCount; i++)
-						{
-							// Extract from device
-							XMFLOAT4 p;
-							XMVECTOR const vec = XMLoadShortN4(&positionData[i]);
-							XMStoreFloat4(&p, vec);
+						SpatialSurfaceMesh^ const mesh = meshes->at(res);
+						XMSHORTN4* const positionData = GetDataFromIBuffer<XMSHORTN4>(mesh->VertexPositions->Data);
+						IndexFormat* const indexData = GetDataFromIBuffer<IndexFormat>(mesh->TriangleIndices->Data);
 
-							// Scale and transform
-							float3 const pScaled = float3(p.x * pScale.x, p.y * pScale.y, p.z * pScale.z);
-							float3 const pMeshToWorld = transform(pScaled, transMeshToWorld->Value);
+						if (positionData != nullptr && indexData != nullptr) {
 
-							// Cache
-							m_positions.push_back(pMeshToWorld);
+							m_positions.clear();
+							auto const pScale = mesh->VertexPositionScale;
 
-							// Insert back into app
-							//float3 const pWorldToMesh = transform(pMeshToWorld, transWorldToMesh->Value);
-							//p = { pWorldToMesh.x / pScale.x, pWorldToMesh.y / pScale.y, pWorldToMesh.z / pScale.z, p.w };
+							for (int i = 0; i < mesh->VertexPositions->ElementCount; i++)
+							{
+								// Extract from device
+								XMFLOAT4 p;
+								XMVECTOR const vec = XMLoadShortN4(&positionData[i]);
+								XMStoreFloat4(&p, vec);
 
-							//XMSHORTN4 pUpdated;
-							//XMVECTOR const vecUpdated = XMLoadFloat4(&p);
-							//XMStoreShortN4(&pUpdated, vecUpdated);
+								// Scale and transform
+								float3 const pScaled = float3(p.x * pScale.x, p.y * pScale.y, p.z * pScale.z);
+								float3 const pMeshToWorld = transform(pScaled, transMeshToWorld->Value);
 
-							//positionData[i] = pUpdated;
+								// Cache
+								m_positions.at(res).push_back(pMeshToWorld);
+
+								// Insert back into app
+								//float3 const pWorldToMesh = transform(pMeshToWorld, transWorldToMesh->Value);
+								//p = { pWorldToMesh.x / pScale.x, pWorldToMesh.y / pScale.y, pWorldToMesh.z / pScale.z, p.w };
+
+								//XMSHORTN4 pUpdated;
+								//XMVECTOR const vecUpdated = XMLoadFloat4(&p);
+								//XMStoreShortN4(&pUpdated, vecUpdated);
+
+								//positionData[i] = pUpdated;
+							}
+
+							m_indices.clear();
+
+							for (int i = 0; i < mesh->TriangleIndices->ElementCount; i += 3)
+							{
+								// Reverse index order to get anti clockwise
+								m_indices.at(res).emplace_back(indexData[i + 2]);
+								m_indices.at(res).emplace_back(indexData[i + 1]);
+								m_indices.at(res).emplace_back(indexData[i]);
+							}
+
+							m_faceNormals.clear();
+
+							for (int i = 0; i < mesh->TriangleIndices->ElementCount; i += 3) {
+								auto const& v1 = m_positions.at(res)[m_indices.at(res)[i]];
+								auto const& v2 = m_positions.at(res)[m_indices.at(res)[i + 1]];
+								auto const& v3 = m_positions.at(res)[m_indices.at(res)[i + 2]];
+
+								float3 const edge1(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
+								float3 const edge2(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z);
+
+								m_faceNormals.at(res).push_back(normalize(crossProduct(edge1, edge2)));
+							}
 						}
+					};
 
-						m_indices.clear();
-
-						for (int i = 0; i < meshes->TriangleIndices->ElementCount; i += 3)
-						{
-							// Reverse index order
-							m_indices.emplace_back(indexData[i + 2]);
-							m_indices.emplace_back(indexData[i + 1]);
-							m_indices.emplace_back(indexData[i]);
-						}
-
-						m_faceNormals.clear();
-
-						auto crossProduct = [](float3 const& v1, float3 const& v2) -> float3 {
-							return float3(
-								v1.y * v2.z - v1.z * v2.y,
-								v1.x * v2.z - v1.z * v2.x,
-								v1.x * v2.y - v1.y * v2.x
-							);
-						};
-
-						auto normalize = [](float3 const& v) -> float3 {
-							auto const l = std::sqrt(std::pow(v.x, 2) + std::pow(v.y, 2) + std::pow(v.z, 2));
-							return float3(v.x / l, v.y / l, v.z / l);
-						};
-
-						for (int i = 0; i < m_indices.size(); i += 3) {
-							auto const& v1 = m_positions[m_indices[i]];
-							auto const& v2 = m_positions[m_indices[i + 1]];
-							auto const& v3 = m_positions[m_indices[i + 2]];
-
-							float3 const edge1(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
-							float3 const edge2(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z);
-							float3 const normal(normalize(crossProduct(edge1, edge2)));
-
-							m_faceNormals.push_back(normal);
-						}
-					}
+					storeData(Settings::RES_LOW);
+					storeData(Settings::RES_MED);
+					storeData(Settings::RES_HIGH);
 				}
 
 				// Then, we create Direct3D device buffers with the mesh data provided by HoloLens.
 				Microsoft::WRL::ComPtr<ID3D11Buffer> updatedVertexPositions;
 				Microsoft::WRL::ComPtr<ID3D11Buffer> updatedVertexNormals;
 				Microsoft::WRL::ComPtr<ID3D11Buffer> updatedTriangleIndices;
+
+				IBuffer^ const lowResPositions = meshes->at(Settings::RES_LOW)->VertexPositions->Data;
+				IBuffer^ const lowResVNormals = meshes->at(Settings::RES_LOW)->VertexNormals->Data;
+				IBuffer^ const lowResIndices = meshes->at(Settings::RES_LOW)->TriangleIndices->Data;
 
 				CreateDirectXBuffer(device, D3D11_BIND_VERTEX_BUFFER, lowResPositions, updatedVertexPositions.GetAddressOf());
 				CreateDirectXBuffer(device, D3D11_BIND_VERTEX_BUFFER, lowResVNormals, updatedVertexNormals.GetAddressOf());
