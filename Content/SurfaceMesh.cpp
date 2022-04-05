@@ -53,9 +53,9 @@ SurfaceMesh::~SurfaceMesh()
 	ReleaseDeviceDependentResources();
 }
 
-void SurfaceMesh::UpdateSurfaces(std::unordered_map<double, SpatialSurfaceMesh^> meshes)
+void SurfaceMesh::UpdateSurfaces(std::unordered_map<double, SpatialSurfaceMesh^>& meshes)
 {
-	m_pendingMeshes = meshes;
+	m_pendingMeshes = std::move(meshes);
 }
 
 // Spatial Mapping surface meshes each have a transform. This transform is updated every frame.
@@ -256,8 +256,9 @@ void SurfaceMesh::UpdateVertexResources(
 {
 	if (!m_isExpired && !m_isShuttingDown && worldCoordSystem != nullptr) {
 
-		auto& meshes = std::move(m_pendingMeshes);
-		if (!meshes || meshes->at(Settings::RES_LOW)->TriangleIndices->ElementCount < 3)
+		std::unordered_map<double, SpatialSurfaceMesh^> meshes(std::move(m_pendingMeshes));
+		
+		if (!meshes || meshes.at(Settings::RES_LOW)->TriangleIndices->ElementCount < 3)
 		{
 			// Not enough indices to draw a triangle or there are no pending meshes.
 			return;

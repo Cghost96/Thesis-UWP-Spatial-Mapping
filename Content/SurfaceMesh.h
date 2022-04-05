@@ -39,7 +39,7 @@ namespace SpatialMapping
 		SurfaceMesh();
 		~SurfaceMesh();
 
-		void UpdateSurfaces(std::unordered_map<double, Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^> meshes);
+		void UpdateSurfaces(std::unordered_map<double, Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^>& meshes);
 		void UpdateTransform(
 			ID3D11Device* device,
 			ID3D11DeviceContext* context,

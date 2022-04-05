@@ -104,33 +104,28 @@ Concurrency::task<void> SpatialMapping::RealtimeSurfaceMeshRenderer::AddOrUpdate
 
 	std::unordered_map<double, SpatialSurfaceMesh^> computedMeshes;
 
-	// https://docs.microsoft.com/en-us/cpp/parallel/concrt/task-parallelism-concurrency-runtime?view=msvc-170#lambdas
-	auto optionsPtr = std::make_shared<SpatialSurfaceMeshOptions^>(options);
-	auto newSurfacePtr = std::make_shared<SpatialSurfaceInfo^>(newSurface);
-	auto computedMeshesPtr = std::make_shared<std::unordered_map<double, SpatialSurfaceMesh^ >>(computedMeshes);
-
-	auto computeMeshesTask = create_task([optionsPtr, newSurfacePtr]()
+	auto computeMeshesTask = create_task([&options, &newSurface]()
 		{
-			return (*newSurfacePtr)->TryComputeLatestMeshAsync(Settings::RES_LOW, *optionsPtr);
-		}).then([optionsPtr, newSurfacePtr, computedMeshesPtr](SpatialSurfaceMesh^ mesh)
+			return newSurface->TryComputeLatestMeshAsync(Settings::RES_LOW, options);
+		}).then([&options, &newSurface, &computedMeshes](SpatialSurfaceMesh^ mesh)
 			{
-				computedMeshesPtr->insert({ Settings::RES_LOW, mesh });
-				return (*newSurfacePtr)->TryComputeLatestMeshAsync(Settings::RES_MED, *optionsPtr);
-			}).then([optionsPtr, newSurfacePtr, computedMeshesPtr](SpatialSurfaceMesh^ mesh)
+				computedMeshes.insert({ Settings::RES_LOW, mesh });
+				return newSurface->TryComputeLatestMeshAsync(Settings::RES_MED, options);
+			}).then([&options, &newSurface, &computedMeshes](SpatialSurfaceMesh^ mesh)
 				{
-					computedMeshesPtr->insert({ Settings::RES_MED, mesh });
-					return (*newSurfacePtr)->TryComputeLatestMeshAsync(Settings::RES_HIGH, *optionsPtr);
-				}).then([optionsPtr, newSurfacePtr, computedMeshesPtr](SpatialSurfaceMesh^ mesh)
+					computedMeshes.insert({ Settings::RES_MED, mesh });
+					return newSurface->TryComputeLatestMeshAsync(Settings::RES_HIGH, options);
+				}).then([&options, &newSurface, &computedMeshes](SpatialSurfaceMesh^ mesh)
 					{
-						computedMeshesPtr->insert({ Settings::RES_HIGH, mesh });
+						computedMeshes.insert({ Settings::RES_HIGH, mesh });
 					});
 
-				auto processMeshesTask = computeMeshesTask.then([this, id, computedMeshesPtr]()
+				auto processMeshesTask = computeMeshesTask.then([this, id, &computedMeshes]()
 					{
 						bool const validMeshes =
-							computedMeshesPtr->at(Settings::RES_LOW) != nullptr &&
-							computedMeshesPtr->at(Settings::RES_MED) != nullptr &&
-							computedMeshesPtr->at(Settings::RES_HIGH) != nullptr;
+							computedMeshes.at(Settings::RES_LOW) != nullptr &&
+							computedMeshes.at(Settings::RES_MED) != nullptr &&
+							computedMeshes.at(Settings::RES_HIGH) != nullptr;
 
 						if (validMeshes)
 						{
@@ -138,7 +133,7 @@ Concurrency::task<void> SpatialMapping::RealtimeSurfaceMeshRenderer::AddOrUpdate
 
 							auto& surfaceMesh = m_meshCollection[id];
 							if (!surfaceMesh.Expired()) {
-								surfaceMesh.UpdateSurfaces(computedMeshesPtr);
+								surfaceMesh.UpdateSurfaces(computedMeshes);
 								surfaceMesh.IsActive(true);
 							}
 						}
