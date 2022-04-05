@@ -258,7 +258,7 @@ void SurfaceMesh::UpdateVertexResources(
 
 		std::unordered_map<double, SpatialSurfaceMesh^> meshes(std::move(m_pendingMeshes));
 		
-		if (!meshes || meshes.at(Settings::RES_LOW)->TriangleIndices->ElementCount < 3)
+		if (meshes.size() == 0 || meshes.at(Settings::RES_LOW)->TriangleIndices->ElementCount < 3)
 		{
 			// Not enough indices to draw a triangle or there are no pending meshes.
 			return;
@@ -272,7 +272,7 @@ void SurfaceMesh::UpdateVertexResources(
 				std::lock_guard<std::mutex> lock(m_meshResourcesMutex);
 
 				// All meshes have same coord system since the only difference is resolution
-				SpatialCoordinateSystem^ const meshCoordSys = meshes->at(Settings::RES_LOW)->CoordinateSystem;
+				SpatialCoordinateSystem^ const meshCoordSys = meshes.at(Settings::RES_LOW)->CoordinateSystem;
 				IBox<float4x4>^ const transMeshToWorld = meshCoordSys->TryGetTransformTo(worldCoordSystem);
 				IBox<float4x4>^ const transWorldToMesh = worldCoordSystem->TryGetTransformTo(meshCoordSys);
 
@@ -292,7 +292,7 @@ void SurfaceMesh::UpdateVertexResources(
 
 					auto storeData = [this, &meshes, &transMeshToWorld, &transWorldToMesh, &crossProduct, &normalize](double const res) {
 
-						SpatialSurfaceMesh^ const mesh = meshes->at(res);
+						SpatialSurfaceMesh^ const mesh = meshes.at(res);
 						XMSHORTN4* const positionData = GetDataFromIBuffer<XMSHORTN4>(mesh->VertexPositions->Data);
 						IndexFormat* const indexData = GetDataFromIBuffer<IndexFormat>(mesh->TriangleIndices->Data);
 
@@ -361,16 +361,16 @@ void SurfaceMesh::UpdateVertexResources(
 				Microsoft::WRL::ComPtr<ID3D11Buffer> updatedVertexNormals;
 				Microsoft::WRL::ComPtr<ID3D11Buffer> updatedTriangleIndices;
 
-				IBuffer^ const lowResPositions = meshes->at(Settings::RES_LOW)->VertexPositions->Data;
-				IBuffer^ const lowResVNormals = meshes->at(Settings::RES_LOW)->VertexNormals->Data;
-				IBuffer^ const lowResIndices = meshes->at(Settings::RES_LOW)->TriangleIndices->Data;
+				IBuffer^ const lowResPositions = meshes.at(Settings::RES_LOW)->VertexPositions->Data;
+				IBuffer^ const lowResVNormals = meshes.at(Settings::RES_LOW)->VertexNormals->Data;
+				IBuffer^ const lowResIndices = meshes.at(Settings::RES_LOW)->TriangleIndices->Data;
 
 				CreateDirectXBuffer(device, D3D11_BIND_VERTEX_BUFFER, lowResPositions, updatedVertexPositions.GetAddressOf());
 				CreateDirectXBuffer(device, D3D11_BIND_VERTEX_BUFFER, lowResVNormals, updatedVertexNormals.GetAddressOf());
 				CreateDirectXBuffer(device, D3D11_BIND_INDEX_BUFFER, lowResIndices, updatedTriangleIndices.GetAddressOf());
 
 				// Before updating the meshes, check to ensure that there wasn't a more recent update.
-				auto const meshUpdateTime = meshes->at(Settings::RES_LOW)->SurfaceInfo->UpdateTime;
+				auto const meshUpdateTime = meshes.at(Settings::RES_LOW)->SurfaceInfo->UpdateTime;
 				if (meshUpdateTime.UniversalTime > m_lastUpdateTime.UniversalTime)
 				{
 					// Prepare to swap in the new meshes.
@@ -380,12 +380,12 @@ void SurfaceMesh::UpdateVertexResources(
 					m_updatedTriangleIndicesBuffer.Swap(updatedTriangleIndices);
 
 					// Cache properties
-					m_updatedMeshProperties.localCoordSystem = meshes->at(Settings::RES_LOW)->CoordinateSystem;
-					m_updatedMeshProperties.vertexPositionScale = meshes->at(Settings::RES_LOW)->VertexPositionScale;
-					m_updatedMeshProperties.vertexStride = meshes->at(Settings::RES_LOW)->VertexPositions->Stride;
-					m_updatedMeshProperties.normalStride = meshes->at(Settings::RES_LOW)->VertexNormals->Stride;
-					m_updatedMeshProperties.indexCount = meshes->at(Settings::RES_LOW)->TriangleIndices->ElementCount;
-					m_updatedMeshProperties.indexFormat = static_cast<DXGI_FORMAT>(meshes->at(Settings::RES_LOW)->TriangleIndices->Format);
+					m_updatedMeshProperties.localCoordSystem = meshes.at(Settings::RES_LOW)->CoordinateSystem;
+					m_updatedMeshProperties.vertexPositionScale = meshes.at(Settings::RES_LOW)->VertexPositionScale;
+					m_updatedMeshProperties.vertexStride = meshes.at(Settings::RES_LOW)->VertexPositions->Stride;
+					m_updatedMeshProperties.normalStride = meshes.at(Settings::RES_LOW)->VertexNormals->Stride;
+					m_updatedMeshProperties.indexCount = meshes.at(Settings::RES_LOW)->TriangleIndices->ElementCount;
+					m_updatedMeshProperties.indexFormat = static_cast<DXGI_FORMAT>(meshes.at(Settings::RES_LOW)->TriangleIndices->Format);
 
 					// Send a signal to the render loop indicating that new resources are available to use.
 					m_updateReady = true;
@@ -416,7 +416,7 @@ void SurfaceMesh::CreateDeviceDependentResources(
 
 void SurfaceMesh::ReleaseVertexResources()
 {
-	m_pendingMeshes = nullptr;
+	m_pendingMeshes.clear();
 
 	m_meshProperties = {};
 	GetVertexPositions().Reset();

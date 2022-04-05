@@ -104,18 +104,15 @@ Concurrency::task<void> SpatialMapping::RealtimeSurfaceMeshRenderer::AddOrUpdate
 
 	std::unordered_map<double, SpatialSurfaceMesh^> computedMeshes;
 
-	auto computeMeshesTask = create_task([&options, &newSurface]()
-		{
-			return newSurface->TryComputeLatestMeshAsync(Settings::RES_LOW, options);
-		}).then([&options, &newSurface, &computedMeshes](SpatialSurfaceMesh^ mesh)
+	auto computeMeshesTask = create_task(newSurface->TryComputeLatestMeshAsync(Settings::RES_LOW, options)).then([options, newSurface, computedMeshes](SpatialSurfaceMesh^ mesh)
 			{
 				computedMeshes.insert({ Settings::RES_LOW, mesh });
-				return newSurface->TryComputeLatestMeshAsync(Settings::RES_MED, options);
-			}).then([&options, &newSurface, &computedMeshes](SpatialSurfaceMesh^ mesh)
+				return newSurface->TryComputeLatestMeshAsync(Settings::RES_MED, options)->GetResults();
+			}).then([options, newSurface, computedMeshes](SpatialSurfaceMesh^ mesh)
 				{
 					computedMeshes.insert({ Settings::RES_MED, mesh });
 					return newSurface->TryComputeLatestMeshAsync(Settings::RES_HIGH, options);
-				}).then([&options, &newSurface, &computedMeshes](SpatialSurfaceMesh^ mesh)
+				}).then([options, newSurface, computedMeshes](SpatialSurfaceMesh^ mesh)
 					{
 						computedMeshes.insert({ Settings::RES_HIGH, mesh });
 					});
