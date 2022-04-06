@@ -40,7 +40,7 @@ namespace SpatialMapping
 
 		Windows::Foundation::DateTime LastUpdateTime(int const id);
 
-		void HideInactiveSurfaces(
+		void HideInactiveMeshes(
 			std::unordered_map<int, Platform::Guid> const& observedIDs,
 			Windows::Foundation::Collections::IMapView<Platform::Guid,
 			Windows::Perception::Spatial::Surfaces::SpatialSurfaceInfo^>^ const& surfaceCollection);
@@ -64,9 +64,6 @@ namespace SpatialMapping
 
 		// A way to lock map access.
 		std::mutex                                      m_meshCollectionLock;
-
-		// Level of detail setting. The number of triangles that the system is allowed to provide per cubic meter.
-		double const                                    m_maxTrianglesPerCubicMeter = Settings::RES_MED;
 
 		// If the current D3D Device supports VPRT, we can avoid using a geometry
 		// shader just to set the render target array index.

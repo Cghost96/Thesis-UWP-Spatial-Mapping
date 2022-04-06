@@ -6,7 +6,7 @@
   xmlns:uap2="http://schemas.microsoft.com/appx/manifest/uap/windows10/2"
   IgnorableNamespaces="uap uap2 mp"
   >
-  <Identity Name="HoloLens2.SpatialMapping.CPP" Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" Version="1.0.35.0"/>
+  <Identity Name="HoloLens2.SpatialMapping.CPP" Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" Version="1.0.43.0"/>
   <mp:PhoneIdentity PhoneProductId="d49985cd-cda5-4faa-b256-d255f1ea55e2" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
   <Properties>
     <DisplayName>HoloLens 2 Spatial Mapping</DisplayName>

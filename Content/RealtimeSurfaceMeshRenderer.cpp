@@ -102,31 +102,12 @@ Concurrency::task<void> SpatialMapping::RealtimeSurfaceMeshRenderer::AddOrUpdate
 	auto options = ref new SpatialSurfaceMeshOptions();
 	options->IncludeVertexNormals = Settings::INCLUDE_VERTEX_NORMALS;
 
-	std::unordered_map<double, SpatialSurfaceMesh^> computedMeshes;
-
-	auto computeMeshesTask = create_task(newSurface->TryComputeLatestMeshAsync(Settings::RES_LOW, options)).then([options, newSurface, computedMeshes](SpatialSurfaceMesh^ mesh)
+	auto computeMeshTask = create_task(newSurface->TryComputeLatestMeshAsync(Settings::MAX_TRIANGLE_RES, options));
+	auto processMeshTask = computeMeshTask.then([this, id](SpatialSurfaceMesh^ mesh)
+		{
+			if (mesh != nullptr)
 			{
-				computedMeshes.insert({ Settings::RES_LOW, mesh });
-				return newSurface->TryComputeLatestMeshAsync(Settings::RES_MED, options)->GetResults();
-			}).then([options, newSurface, computedMeshes](SpatialSurfaceMesh^ mesh)
-				{
-					computedMeshes.insert({ Settings::RES_MED, mesh });
-					return newSurface->TryComputeLatestMeshAsync(Settings::RES_HIGH, options);
-				}).then([options, newSurface, computedMeshes](SpatialSurfaceMesh^ mesh)
-					{
-						computedMeshes.insert({ Settings::RES_HIGH, mesh });
-					});
-
-				auto processMeshesTask = computeMeshesTask.then([this, id, &computedMeshes]()
-					{
-						bool const validMeshes =
-							computedMeshes.at(Settings::RES_LOW) != nullptr &&
-							computedMeshes.at(Settings::RES_MED) != nullptr &&
-							computedMeshes.at(Settings::RES_HIGH) != nullptr;
-
-						if (validMeshes)
-						{
-							std::lock_guard<std::mutex> guard(m_meshCollectionLock);
+				std::lock_guard<std::mutex> guard(m_meshCollectionLock);
 
 							auto& surfaceMesh = m_meshCollection[id];
 							if (!surfaceMesh.Expired()) {
@@ -144,11 +125,8 @@ void RealtimeSurfaceMeshRenderer::HideInactiveSurfaces(std::unordered_map<int, G
 	std::lock_guard<std::mutex> guard(m_meshCollectionLock);
 
 	// Hide surfaces that aren't actively listed in the surface collection.
-	for (auto& pair : m_meshCollection)
+	for (auto& [id, surfaceMesh] : m_meshCollection)
 	{
-		const auto& id = pair.first;
-		auto& surfaceMesh = pair.second;
-
 		try
 		{
 			observedIDs.at(id);
