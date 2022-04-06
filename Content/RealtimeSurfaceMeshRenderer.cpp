@@ -201,11 +201,8 @@ void RealtimeSurfaceMeshRenderer::Render(bool isStereo, bool useWireframe)
 
 		// Draw the meshes.
 		auto device = m_deviceResources->GetD3DDevice();
-		for (auto& pair : m_meshCollection)
+		for (auto& [id, surfaceMesh] : m_meshCollection)
 		{
-			auto& id = pair.first;
-			auto& surfaceMesh = pair.second;
-
 			surfaceMesh.Draw(device, context, m_usingVprtShaders, isStereo);
 		}
 	}

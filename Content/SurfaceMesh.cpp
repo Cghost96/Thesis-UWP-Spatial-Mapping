@@ -285,7 +285,8 @@ void SurfaceMesh::UpdateVertexResources(
 
 					if (positionData != nullptr && indexData != nullptr) {
 
-						m_positions.clear();
+						m_positionsTransformed.clear();
+						m_positionsNotTransformed.clear();
 						float3 const pScale = surfaceMesh->VertexPositionScale;
 
 						for (int i = 0; i < surfaceMesh->VertexPositions->ElementCount; i++)
@@ -300,7 +301,8 @@ void SurfaceMesh::UpdateVertexResources(
 							float3 const pMeshToWorld = transform(pScaled, meshCoordSysToWorld->Value);
 
 							// Cache
-							m_positions.push_back(pMeshToWorld);
+							m_positionsNotTransformed.push_back(pScaled);
+							m_positionsTransformed.push_back(pMeshToWorld);
 
 							// Insert back into app
 							//float3 const pWorldToMesh = transform(pMeshToWorld, worldCoordSysToMesh->Value);
@@ -339,9 +341,9 @@ void SurfaceMesh::UpdateVertexResources(
 						};
 
 						for (int i = 0; i < m_indices.size(); i += 3) {
-							auto const& v1 = m_positions[m_indices[i]];
-							auto const& v2 = m_positions[m_indices[i + 1]];
-							auto const& v3 = m_positions[m_indices[i + 2]];
+							auto const& v1 = m_positionsTransformed[m_indices[i]];
+							auto const& v2 = m_positionsTransformed[m_indices[i + 1]];
+							auto const& v3 = m_positionsTransformed[m_indices[i + 2]];
 
 							float3 const edge1(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
 							float3 const edge2(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z);
@@ -448,7 +450,7 @@ void SurfaceMesh::ReleaseDeviceDependentResources()
 	// Clear out active resources.
 	ReleaseVertexResources();
 
-	m_positions.clear();
+	m_positionsTransformed.clear();
 	m_faceNormals.clear();
 	m_indices.clear();
 
