@@ -452,7 +452,6 @@ void SpatialMappingMain::SaveAppState()
 
 			fileOut << "o mesh_" << id << "\n";
 
-			fileOut << "# Number of vertices: " << (*positions).size() << "\n";
 			for (auto const& p : *positions) {
 				fileOut << "v " << p.x << " " << p.y << " " << p.z << "\n";
 			}
@@ -467,7 +466,6 @@ void SpatialMappingMain::SaveAppState()
 			float const mtlIncrement = 1000.f / noFaces;
 			float mtlNumber = 1.f;
 
-			fileOut << "# Number of faces: " << (int)noFaces << "\n";
 			for (int i = 0; i < (*indices).size(); i += 3) {
 				fileOut << "usemtl Material." << std::setw(4) << std::setfill('0') << (int)std::floor(mtlNumber) << "\n";
 

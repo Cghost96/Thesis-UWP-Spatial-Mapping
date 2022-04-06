@@ -67,7 +67,7 @@ void RealtimeSurfaceMeshRenderer::Update(
 		// Check to see if the mesh has expired.
 		float const lastActiveTime = surfaceMesh.LastActiveTime();
 		float const inactiveDuration = timeElapsed - lastActiveTime;
-		if (inactiveDuration > m_maxInactiveMeshTime)
+		if (inactiveDuration > Settings::MAX_INACTIVE_MESH_TIME)
 		{
 			surfaceMesh.Expired(true);
 			//m_meshCollection.erase(iter);
@@ -87,7 +87,7 @@ void SpatialMapping::RealtimeSurfaceMeshRenderer::AddSurface(int const id, Windo
 				// color. This allows you to observe changes in the spatial map that are due to new meshes,
 				// as opposed to mesh updates.
 				auto& surfaceMesh = m_meshCollection[id];
-				surfaceMesh.ColorFadeTimer(m_surfaceMeshFadeInTime);
+				surfaceMesh.ColorFadeTimer(Settings::MESH_FADE_IN_TIME);
 			}
 		});
 }
@@ -102,7 +102,7 @@ Concurrency::task<void> SpatialMapping::RealtimeSurfaceMeshRenderer::AddOrUpdate
 	auto options = ref new SpatialSurfaceMeshOptions();
 	options->IncludeVertexNormals = Settings::INCLUDE_VERTEX_NORMALS;
 
-	auto computeMeshTask = create_task(newSurface->TryComputeLatestMeshAsync(m_maxTrianglesPerCubicMeter, options));
+	auto computeMeshTask = create_task(newSurface->TryComputeLatestMeshAsync(Settings::MAX_TRIANGLE_RES, options));
 	auto processMeshTask = computeMeshTask.then([this, id](SpatialSurfaceMesh^ mesh)
 		{
 			if (mesh != nullptr)
@@ -125,11 +125,8 @@ void RealtimeSurfaceMeshRenderer::HideInactiveMeshes(std::unordered_map<int, Gui
 	std::lock_guard<std::mutex> guard(m_meshCollectionLock);
 
 	// Hide surfaces that aren't actively listed in the surface collection.
-	for (auto& pair : m_meshCollection)
+	for (auto& [id, surfaceMesh] : m_meshCollection)
 	{
-		const auto& id = pair.first;
-		auto& surfaceMesh = pair.second;
-
 		try
 		{
 			observedIDs.at(id);
