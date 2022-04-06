@@ -189,7 +189,7 @@ void SpatialMappingMain::OnSurfacesChanged(
 	// not included in the surface collection to avoid rendering them.
 	// The system can including them in the collection again later, in which case
 	// they will no longer be hidden.
-	m_meshRenderer->HideInactiveSurfaces(observedIDs, surfaceCollection);
+	m_meshRenderer->HideInactiveMeshes(observedIDs, surfaceCollection);
 }
 
 // Updates the application state once per frame.
@@ -320,7 +320,7 @@ HolographicFrame^ SpatialMappingMain::Update()
 
 				break;
 			case SpatialInteractionSourceHandedness::Right:
-				m_drawWireFrame = !m_drawWireFrame;
+				m_drawWirfeFrame = !m_drawWirfeFrame;
 				break;
 			default:
 				break;
@@ -393,7 +393,7 @@ bool SpatialMappingMain::Render(
 				if (cameraActive)
 				{
 					// Draw the sample hologram.
-					m_meshRenderer->Render(pCameraResources->IsRenderingStereoscopic(), m_drawWireFrame);
+					m_meshRenderer->Render(pCameraResources->IsRenderingStereoscopic(), m_drawWirfeFrame);
 
 					// On versions of the platform that support the CommitDirect3D11DepthBuffer API, we can 
 					// provide the depth buffer to the system, and it will use depth information to stabilize 
@@ -428,79 +428,66 @@ bool SpatialMappingMain::Render(
 
 void SpatialMappingMain::SaveAppState()
 {
+	String^ const folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
+	std::wstring const folderW(folder->Begin());
+	std::string const folderA(folderW.begin(), folderW.end());
+	const char* charStr = folderA.c_str();
+	char file[512];
+	std::snprintf(file, 512, "%s\\meshes.obj", charStr);
+	std::ofstream fileOut(file, std::ios::out);
+
+	fileOut << "mtllib Mesh.mtl\n";
+
 	std::lock_guard<std::mutex> guard(m_exportMutex);
 
-	auto saveMeshes = [this](char const filePath[], double const res) {
+	auto const meshMap = m_meshRenderer->MeshCollection();
 
-		std::ofstream fileOut(filePath, std::ios::out);
-		fileOut << "mtllib Mesh.mtl\n";
+	int index_base_offset = 0;
 
-		auto const meshMap = m_meshRenderer->MeshCollection();
+	for (auto const& [id, mesh] : *meshMap) {
+		if (!mesh.Expired()) {
+			auto const positions = mesh.Positions();
+			auto const faceNormals = mesh.FaceNormals();
+			auto const indices = mesh.Indices();
 
-		int index_base_offset = 0;
-
-		for (auto const& [id, mesh] : *meshMap) {
-			if (!mesh.Expired()) {
-				auto const& positions = mesh.Positions()->at(res);
-				auto const& faceNormals = mesh.FaceNormals()->at(res);
-				auto const& indices = mesh.Indices()->at(res);
-
-				fileOut << "o mesh_" << id << "_" << (int)res << "\n";
+			fileOut << "o mesh_" << id << "\n";
 
 			for (auto const& p : *positions) {
 				fileOut << "v " << p.x << " " << p.y << " " << p.z << "\n";
 			}
 
-				for (auto const& n : faceNormals) {
-					fileOut << "vn " << n.x << " " << n.y << " " << n.z << "\n";
-				}
+			for (auto const& n : *faceNormals) {
+				fileOut << "vn " << n.x << " " << n.y << " " << n.z << "\n";
+			}
 
-				fileOut << "s off\n";
+			fileOut << "s off\n";
 
-				float const noFaces = indices.size() / 3.f;
-				float const mtlIncrement = 1000.f / noFaces;
-				float mtlNumber = 1.f;
+			float const noFaces = (*indices).size() / 3.f;
+			float const mtlIncrement = 1000.f / noFaces;
+			float mtlNumber = 1.f;
 
-			fileOut << "# Number of faces: " << (int)noFaces << "\n";
 			for (int i = 0; i < (*indices).size(); i += 3) {
 				fileOut << "usemtl Material." << std::setw(4) << std::setfill('0') << (int)std::floor(mtlNumber) << "\n";
 
-					// +1 to get .obj format
-					int const i1 = indices[i] + index_base_offset + 1;
-					int const i2 = indices[i + 1] + index_base_offset + 1;
-					int const i3 = indices[i + 2] + index_base_offset + 1;
-					int const n_index = (i / 3) + index_base_offset + 1;
+				// +1 to get .obj format
+				int const i1 = (*indices)[i] + index_base_offset + 1;
+				int const i2 = (*indices)[i + 1] + index_base_offset + 1;
+				int const i3 = (*indices)[i + 2] + index_base_offset + 1;
+				int const n_index = (i / 3) + index_base_offset + 1;
 
-					fileOut
-						<< "f "
-						<< i1 << "//" << n_index << " "
-						<< i2 << "//" << n_index << " "
-						<< i3 << "//" << n_index << "\n";
-					mtlNumber += mtlIncrement;
-				}
-
-				index_base_offset += positions.size();
+				fileOut
+					<< "f "
+					<< i1 << "//" << n_index << " "
+					<< i2 << "//" << n_index << " "
+					<< i3 << "//" << n_index << "\n";
+				mtlNumber += mtlIncrement;
 			}
+
+			index_base_offset += (*positions).size();
 		}
+	}
 
-		fileOut.close();
-	};
-
-	String^ const folder = ApplicationData::Current->LocalFolder->Path + "\\Meshes";
-	std::wstring const folderW(folder->Begin());
-	std::string const folderA(folderW.begin(), folderW.end());
-	const char* charStr = folderA.c_str();
-
-	char fileLowRes[512];
-	char fileMedRes[512];
-	char fileHighRes[512];
-	std::snprintf(fileLowRes, 512, "%s\\meshes_low_res_%d.obj", charStr, (int)Settings::RES_LOW);
-	std::snprintf(fileMedRes, 512, "%s\\meshes_med_res_%d.obj", charStr, (int)Settings::RES_MED);
-	std::snprintf(fileHighRes, 512, "%s\\meshes_high_res_%d.obj", charStr, (int)Settings::RES_HIGH);
-
-	saveMeshes(fileLowRes, Settings::RES_LOW);
-	saveMeshes(fileMedRes, Settings::RES_MED);
-	saveMeshes(fileHighRes, Settings::RES_HIGH);
+	fileOut.close();
 }
 
 void SpatialMappingMain::LoadAppState()

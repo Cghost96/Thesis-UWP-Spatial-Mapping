@@ -39,7 +39,7 @@ namespace SpatialMapping
 		SurfaceMesh();
 		~SurfaceMesh();
 
-		void UpdateSurfaces(std::unordered_map<double, Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^>& meshes);
+		void UpdateSurface(Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ surface);
 		void UpdateTransform(
 			ID3D11Device* device,
 			ID3D11DeviceContext* context,
@@ -60,9 +60,9 @@ namespace SpatialMapping
 		const bool& IsActive()       const { return m_isActive; }
 		const float& LastActiveTime() const { return m_lastActiveTime; }
 		const Windows::Foundation::DateTime& LastUpdateTime() const { return m_lastUpdateTime; }
-		const std::unordered_map<double, std::vector<float3>>* Positions() const { return &m_positions; }
-		const std::unordered_map<double, std::vector<float3>>* FaceNormals() const { return &m_faceNormals; }
-		const std::unordered_map<double, std::vector<IndexFormat>>* Indices() const { return &m_indices; }
+		const std::vector<Windows::Foundation::Numerics::float3>* Positions() const { return &m_positions; }
+		const std::vector<Windows::Foundation::Numerics::float3>* FaceNormals() const { return &m_faceNormals; }
+		const std::vector<IndexFormat>* Indices() const { return &m_indices; }
 		const SurfaceMeshProperties* GetSurfaceMeshProperties() const { return &m_meshProperties; }
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexPositions() const { return m_vertexPositionsBuffer; }
 		Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexNormals() const { return m_vertexNormalsBuffer; }
@@ -92,11 +92,12 @@ namespace SpatialMapping
 
 		concurrency::task<void> m_updateVertexResourcesTask = concurrency::task_from_result();
 
-		std::unordered_map<double, Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^> m_pendingMeshes;
+		Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ m_pendingSurfaceMesh = nullptr;
+		Windows::Perception::Spatial::Surfaces::SpatialSurfaceMesh^ m_surfaceMesh = nullptr;
 
-		std::unordered_map<double, std::vector<float3>> m_positions;
-		std::unordered_map<double, std::vector<float3>> m_faceNormals;
-		std::unordered_map<double, std::vector<IndexFormat>> m_indices;
+		std::vector<float3> m_positions;
+		std::vector<float3> m_faceNormals;
+		std::vector<IndexFormat> m_indices;
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexPositionsBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexNormalsBuffer;

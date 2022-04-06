@@ -76,4 +76,3 @@ namespace SpatialMapping
 		bool m_loadingComplete;
 	};
 };
-

@@ -109,18 +109,18 @@ Concurrency::task<void> SpatialMapping::RealtimeSurfaceMeshRenderer::AddOrUpdate
 			{
 				std::lock_guard<std::mutex> guard(m_meshCollectionLock);
 
-							auto& surfaceMesh = m_meshCollection[id];
-							if (!surfaceMesh.Expired()) {
-								surfaceMesh.UpdateSurfaces(computedMeshes);
-								surfaceMesh.IsActive(true);
-							}
-						}
-					}, task_continuation_context::use_current());
+				auto& surfaceMesh = m_meshCollection[id];
+				if (!surfaceMesh.Expired()) {
+					surfaceMesh.UpdateSurface(mesh);
+					surfaceMesh.IsActive(true);
+				}
+			}
+		}, task_continuation_context::use_current());
 
-				return processMeshesTask;
+	return processMeshTask;
 }
 
-void RealtimeSurfaceMeshRenderer::HideInactiveSurfaces(std::unordered_map<int, Guid> const& observedIDs, IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection)
+void RealtimeSurfaceMeshRenderer::HideInactiveMeshes(std::unordered_map<int, Guid> const& observedIDs, IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection)
 {
 	std::lock_guard<std::mutex> guard(m_meshCollectionLock);
 
