@@ -10,7 +10,7 @@ using namespace Windows::Foundation::Numerics;
 
 namespace Settings {
 	bool const DRAW_WIREFRAME_INIT_VALUE = true;
-	double const MAX_TRIANGLE_RES = 3500;
+	double const MAX_TRIANGLE_RES = 8000;
 	float const MAX_INACTIVE_MESH_TIME = 60.0f * 10.0f;
 	float const MESH_FADE_IN_TIME = 1.5f;
 	bool const INCLUDE_VERTEX_NORMALS = true;
