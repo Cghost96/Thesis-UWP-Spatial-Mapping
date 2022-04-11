@@ -1,0 +1,10 @@
+# Blender v3.0.1 OBJ File: 'VRLabScanNotImproved.blend'
+# www.blender.org
+o Plane.001
+v -4.537750 -0.017143 2.437300
+v 4.462249 -0.017143 2.437300
+v -4.537750 -0.017143 -2.462700
+v 4.462249 -0.017143 -2.462700
+s off
+f 2 3 1
+f 2 4 3
