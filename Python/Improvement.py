@@ -5,8 +5,8 @@ import locale
 # Set to users preferred locale:
 locale.setlocale(locale.LC_ALL, '')
 
-D_THRESHOlD = 0.055  # cm
-D_CM = 55
+D_THRESHOlD = 0.035  # cm
+D_CM = 35
 
 #  Right wall, left wall, floor - computed in CloudCompare
 plane_points = [(2.069, 0.607, -1.447), (1.271, 0.375, 1.540), (1.706, -1.510, 0.053)]
