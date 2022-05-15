@@ -65,9 +65,6 @@ namespace SpatialMapping
 		// A way to lock map access.
 		std::mutex                                      m_meshCollectionLock;
 
-		// Level of detail setting. The number of triangles that the system is allowed to provide per cubic meter.
-		double const                                    m_maxTrianglesPerCubicMeter = Settings::MAX_TRIANGLES_PER_CUBIC_METER;
-
 		// If the current D3D Device supports VPRT, we can avoid using a geometry
 		// shader just to set the render target array index.
 		bool                                            m_usingVprtShaders = false;
@@ -76,13 +73,6 @@ namespace SpatialMapping
 		Microsoft::WRL::ComPtr<ID3D11RasterizerState>   m_defaultRasterizerState;
 		Microsoft::WRL::ComPtr<ID3D11RasterizerState>   m_wireframeRasterizerState;
 
-		// The duration of time, in seconds, a mesh is allowed to remain inactive before deletion.
-		const float m_maxInactiveMeshTime = Settings::MAX_INACTIVE_MESH_TIME;
-
-		// The duration of time, in seconds, taken for a new surface mesh to fade in on-screen.
-		const float m_surfaceMeshFadeInTime = Settings::MESH_FADE_IN_TIME;
-
 		bool m_loadingComplete;
 	};
 };
-

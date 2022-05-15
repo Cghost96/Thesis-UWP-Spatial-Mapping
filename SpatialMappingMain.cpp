@@ -158,6 +158,7 @@ void SpatialMappingMain::OnSurfacesChanged(
 	IMapView<Guid, SpatialSurfaceInfo^>^ const& surfaceCollection = sender->GetObservedSurfaces();
 	std::unordered_map<int, Guid> observedIDs;
 
+
 	// Process surface adds and updates.
 	for (auto& const pair : surfaceCollection)
 	{
@@ -294,11 +295,13 @@ HolographicFrame^ SpatialMappingMain::Update()
 					m_meshRenderer->AddSurface(id, surfaceInfo);
 				}
 
-				// We then subscribe to an event to receive up-to-date data.
-				m_surfacesChangedToken = m_surfaceObserver->ObservedSurfacesChanged +=
-					ref new TypedEventHandler<SpatialSurfaceObserver^, Platform::Object^>(
-						bind(&SpatialMappingMain::OnSurfacesChanged, this, _1, _2)
-						);
+				if (!Settings::MOCK_IMPROVEMENT) {
+					// We then subscribe to an event to receive up-to-date data.
+					m_surfacesChangedToken = m_surfaceObserver->ObservedSurfacesChanged +=
+						ref new TypedEventHandler<SpatialSurfaceObserver^, Platform::Object^>(
+							bind(&SpatialMappingMain::OnSurfacesChanged, this, _1, _2)
+							);
+				}
 			}
 		}
 
@@ -317,7 +320,7 @@ HolographicFrame^ SpatialMappingMain::Update()
 
 				break;
 			case SpatialInteractionSourceHandedness::Right:
-				m_drawWirfeFrame = !m_drawWirfeFrame;
+				m_drawWireFrame = !m_drawWireFrame;
 				break;
 			default:
 				break;
@@ -390,7 +393,7 @@ bool SpatialMappingMain::Render(
 				if (cameraActive)
 				{
 					// Draw the sample hologram.
-					m_meshRenderer->Render(pCameraResources->IsRenderingStereoscopic(), m_drawWirfeFrame);
+					m_meshRenderer->Render(pCameraResources->IsRenderingStereoscopic(), m_drawWireFrame);
 
 					// On versions of the platform that support the CommitDirect3D11DepthBuffer API, we can 
 					// provide the depth buffer to the system, and it will use depth information to stabilize 
@@ -429,11 +432,18 @@ void SpatialMappingMain::SaveAppState()
 	std::wstring const folderW(folder->Begin());
 	std::string const folderA(folderW.begin(), folderW.end());
 	const char* charStr = folderA.c_str();
-	char file[512];
-	std::snprintf(file, 512, "%s\\meshes.obj", charStr);
-	std::ofstream fileOut(file, std::ios::out);
 
-	fileOut << "mtllib Mesh.mtl\n";
+	char fileTransformed[512];
+	char fileNotTransformed[512];
+	
+	std::snprintf(fileTransformed, 512, "%s\\meshes_transformed_%d.obj", charStr, (int)Settings::MAX_TRIANGLE_RES);
+	std::snprintf(fileNotTransformed, 512, "%s\\meshes_not_transformed_%d.obj", charStr, (int)Settings::MAX_TRIANGLE_RES);
+	
+	std::ofstream fileOutTransformed(fileTransformed, std::ios::out);
+	std::ofstream fileOutNotTransformed(fileNotTransformed, std::ios::out);
+
+	fileOutTransformed << "mtllib Mesh.mtl\n";
+	fileOutNotTransformed << "mtllib Mesh.mtl\n";
 
 	std::lock_guard<std::mutex> guard(m_exportMutex);
 
@@ -443,30 +453,37 @@ void SpatialMappingMain::SaveAppState()
 
 	for (auto const& [id, mesh] : *meshMap) {
 		if (!mesh.Expired()) {
-			auto const positions = mesh.Positions();
+			auto const positionsTransformed = mesh.PositionsTransformed();
+			auto const positionsNotTransformed = mesh.PositionsNotTransformed();
 			auto const faceNormals = mesh.FaceNormals();
 			auto const indices = mesh.Indices();
 
-			fileOut << "o mesh_" << id << "\n";
+			fileOutTransformed << "o mesh_" << id << "\n";
+			fileOutNotTransformed << "o mesh_" << id << "\n";
 
-			fileOut << "# Number of vertices: " << (*positions).size() << "\n";
-			for (auto const& p : *positions) {
-				fileOut << "v " << p.x << " " << p.y << " " << p.z << "\n";
+			for (auto const& p : *positionsTransformed) {
+				fileOutTransformed << "v " << p.x << " " << p.y << " " << p.z << "\n";
+			}
+
+			for (auto const& p : *positionsNotTransformed) {
+				fileOutNotTransformed << "v " << p.x << " " << p.y << " " << p.z << "\n";
 			}
 
 			for (auto const& n : *faceNormals) {
-				fileOut << "vn " << n.x << " " << n.y << " " << n.z << "\n";
+				fileOutTransformed << "vn " << n.x << " " << n.y << " " << n.z << "\n";
+				fileOutNotTransformed << "vn " << n.x << " " << n.y << " " << n.z << "\n";
 			}
 
-			fileOut << "s off\n";
+			fileOutTransformed << "s off\n";
+			fileOutNotTransformed << "s off\n";
 
 			float const noFaces = (*indices).size() / 3.f;
 			float const mtlIncrement = 1000.f / noFaces;
 			float mtlNumber = 1.f;
 
-			fileOut << "# Number of faces: " << (int)noFaces << "\n";
 			for (int i = 0; i < (*indices).size(); i += 3) {
-				fileOut << "usemtl Material." << std::setw(4) << std::setfill('0') << (int)std::floor(mtlNumber) << "\n";
+				fileOutTransformed << "usemtl Material." << std::setw(4) << std::setfill('0') << (int)std::floor(mtlNumber) << "\n";
+				fileOutNotTransformed << "usemtl Material." << std::setw(4) << std::setfill('0') << (int)std::floor(mtlNumber) << "\n";
 
 				// +1 to get .obj format
 				int const i1 = (*indices)[i] + index_base_offset + 1;
@@ -474,19 +491,26 @@ void SpatialMappingMain::SaveAppState()
 				int const i3 = (*indices)[i + 2] + index_base_offset + 1;
 				int const n_index = (i / 3) + index_base_offset + 1;
 
-				fileOut 
+				fileOutTransformed
 					<< "f "
 					<< i1 << "//" << n_index << " "
 					<< i2 << "//" << n_index << " "
 					<< i3 << "//" << n_index << "\n";
+				fileOutNotTransformed
+					<< "f "
+					<< i1 << "//" << n_index << " "
+					<< i2 << "//" << n_index << " "
+					<< i3 << "//" << n_index << "\n";
+
 				mtlNumber += mtlIncrement;
 			}
 
-			index_base_offset += (*positions).size();
+			index_base_offset += (*positionsTransformed).size();
 		}
 	}
 
-	fileOut.close();
+	fileOutTransformed.close();
+	fileOutNotTransformed.close();
 }
 
 void SpatialMappingMain::LoadAppState()
